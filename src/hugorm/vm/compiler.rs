@@ -1,0 +1,320 @@
+#[macro_use]
+use super::*;
+use std::mem;
+use colored::Colorize;
+use std::collections::HashMap;
+
+pub struct Compiler<'a> {
+    pub bytecode: Vec<u8>,
+    pub functions: Vec<u8>, // function time
+    pub functions_i: usize,
+
+    pub visitor: &'a mut Visitor<'a>,
+
+    pub function_ast: HashMap<String, Statement>,
+
+    frame_index: usize,
+    in_func: bool,
+}
+
+impl<'a> Compiler<'a> {
+    pub fn new(visitor: &'a mut Visitor<'a>) -> Self {
+        Compiler {
+            bytecode: Vec::new(),
+            functions: Vec::new(),
+            functions_i: 0,
+            visitor,
+
+            function_ast: HashMap::new(),
+
+            in_func: false,
+
+            frame_index: 0,
+        }
+    }
+
+    pub fn compile(&mut self, ast: &Vec<Statement>) -> Result<(), ()> {
+        for statement in ast.iter() {
+            self.compile_statement(statement)?
+        }
+
+        self.functions_i = self.bytecode.len();
+        self.bytecode.extend(self.functions.clone());
+
+        self.emit(Op::Halt);
+
+        Ok(())
+    }
+
+    pub fn compile_statement(&mut self, statement: &Statement) -> Result<(), ()> {
+        use self::StatementNode::*;
+
+        match statement.node {
+            Expression(ref expression) => self.compile_expression(expression)?,
+            Declaration(ref left, ref right) => self.compile_ass(left, right)?,
+            Assignment(ref left, ref right) => {
+                if let ExpressionNode::Identifier(ref name) = left.node {
+                    self.compile_ass(name, &Some(right.to_owned()))?
+                } else {
+                    panic!("hmm")
+                }
+            },
+
+            Function(ref name, ..) => {
+                self.function_ast.insert(name.to_owned(), statement.clone());
+            },
+
+            _ => (),
+        }
+
+        Ok(())
+    }
+
+    pub fn compile_function(&mut self, function: &Statement, params_t: Vec<Type>) -> Result<(), ()> {
+        if let StatementNode::Function(ref name, ref params, ref body) = function.node {
+            use self::StatementNode::*;
+
+            self.emit(Op::Jmp);
+
+            let jump = self.bytecode.len();        // reference, for changing tmp address
+            self.emit_bytes(&to_bytes!(0 => u32)); // tmp address
+
+            let function_address = &to_bytes!(self.functions.len() as u32 => u32);
+
+            for (i, param) in params.iter().enumerate() {
+                let t = params_t[i].clone();
+
+                self.emit(Op::Pop); // pop the arg
+                self.emit_byte(t.size().abs() as u8);
+            
+                let offset = t.meta.unwrap().0;
+
+                let address = &to_bytes!(offset => u32);
+                self.emit_bytes(address);
+            }
+
+            self.in_func = true;
+
+            self.visitor.symtab.pop_cache();
+
+            println!("\n\n<function :: {}>", name);
+
+            for statement in body.iter() {
+                self.compile_statement(statement)?
+            }
+
+            println!("\n");
+
+            let last = self.visitor.symtab.last.clone();
+
+            self.visitor.symtab.cached_frames.push(last);
+
+            self.in_func = false;
+
+            self.emit(Op::Ret);
+
+            let address = to_bytes!(self.functions.len() as u32 => u32);
+
+            for (i, byte) in address.iter().enumerate() {
+                self.bytecode[jump + i] = *byte
+            }
+
+            self.emit(Op::Push);
+            self.emit_byte(4);
+            self.emit_bytes(function_address);
+
+            // declaration time B)
+
+            let offset = self.visitor.symtab.fetch_cache(name).unwrap().meta.unwrap().0;
+            let address = &to_bytes!(offset => u32);
+
+            self.emit(Op::Pop);
+            self.emit_byte(4);
+            self.emit_bytes(address);
+        }
+
+        Ok(())
+    }
+
+    pub fn compile_expression(&mut self, expression: &Expression) -> Result<(), ()> {
+        use self::ExpressionNode::*;
+
+        match expression.node {
+            Int(ref n) => {
+                self.emit(Op::Push);
+                self.emit_byte(mem::size_of::<i32>() as u8);
+                self.emit_bytes(
+                    unsafe {
+                        &mem::transmute::<i32, [u8; mem::size_of::<i32>()]>(*n)
+                    }
+                )
+            },
+
+            Float(ref n) => {
+                self.emit(Op::Push);
+                self.emit_byte(mem::size_of::<f64>() as u8);
+                self.emit_bytes(
+                    unsafe {
+                        &mem::transmute::<f64, [u8; mem::size_of::<f64>()]>(*n)
+                    }
+                )
+            },
+
+            Str(ref n) => {
+                self.emit(Op::Push);
+                self.emit_byte(n.len() as u8);
+                self.emit_bytes(n.as_bytes());
+            },
+    
+            Bool(ref n) => {
+                self.emit(Op::Push);
+                self.emit_byte(mem::size_of::<u8>() as u8);
+                self.emit_byte(*n as u8)
+            },
+
+            Identifier(ref n) => {
+                let t = self.visitor.symtab.fetch_cache(n).unwrap();
+                let (offset, depth) = t.meta.unwrap();
+                let size = t.size();
+
+                self.emit(Op::PushV);
+                self.emit_byte(depth as u8);
+                self.emit_byte(size as u8);
+                self.emit_bytes(&to_bytes!(offset => u32));
+            },
+
+            Binary(ref left, ref op, ref right) => {
+                use self::Operator::*;
+
+                match *op {
+                    Add => {
+                        self.compile_expression(&left.clone())?;
+                        self.compile_expression(right)?;
+
+                        match self.visitor.type_expression(left)?.node {
+                            TypeNode::Int => {
+                                self.emit(Op::AddI);
+                                self.emit_byte(mem::size_of::<i32>() as u8);
+                            }
+                            TypeNode::Float => {
+                                self.emit(Op::AddF);
+                                self.emit_byte(mem::size_of::<f64>() as u8);
+                            }
+                            _ => (), // grrrr
+                        }
+                    },
+
+                    Sub => {
+                        self.compile_expression(left)?;
+                        self.compile_expression(right)?;
+
+                        match left.node {
+                            ExpressionNode::Int(_) => {
+                                self.emit(Op::SubI);
+                                self.emit_byte(mem::size_of::<i32>() as u8);
+                            }
+                            ExpressionNode::Float(_) => {
+                                self.emit(Op::SubF);
+                                self.emit_byte(mem::size_of::<f64>() as u8);
+                            }
+                            _ => (), // grrrr
+                        }
+                    },
+
+                    Mul => {
+                        self.compile_expression(left)?;
+                        self.compile_expression(right)?;
+
+                        match left.node {
+                            ExpressionNode::Int(_) => {
+                                self.emit(Op::MulI);
+                                self.emit_byte(mem::size_of::<i32>() as u8);
+                            }
+                            ExpressionNode::Float(_) => {
+                                self.emit(Op::MulF);
+                                self.emit_byte(mem::size_of::<f64>() as u8);
+                            }
+                            _ => (), // grrrr
+                        }
+                    },
+
+                    Div => {
+                        self.compile_expression(left)?;
+                        self.compile_expression(right)?;
+
+                        self.emit(Op::DivF); // lel
+                        self.emit_byte(mem::size_of::<f64>() as u8);
+                    },
+
+                    _ => (),
+                }
+            },
+
+            Call(ref caller, ref args) => {
+                // TODO: check for double
+                let mut params = Vec::new();
+
+                for arg in args.iter() {
+                    params.push(self.visitor.type_expression(arg)?)
+                }
+
+                if let ExpressionNode::Identifier(ref n) = caller.node {
+                    let func = self.function_ast[n].clone(); // haha
+
+                    self.compile_function(&func, params)?;
+                }
+            }
+
+            _ => (),
+        }
+
+        Ok(())
+    }
+
+    fn compile_ass(&mut self, left: &String, right: &Option<Expression>) -> Result<(), ()> {
+        use self::TypeNode::*;
+
+        self.compile_expression(&right.clone().unwrap())?;
+
+        let right_t = self.visitor.type_expression(right.as_ref().unwrap())?;
+
+        let offset = self.visitor.symtab.fetch_cache(left).unwrap().meta.unwrap().0;
+        let address = &to_bytes!(offset => u32);
+
+        self.emit(Op::Pop);
+        self.emit_byte(right_t.size().abs() as u8);
+        self.emit_bytes(address);
+
+        Ok(())
+    }
+
+    fn emit(&mut self, code: Op) {
+        print!("\n{:?}", code);
+
+        if self.in_func {
+            self.functions.push(code as u8)
+        } else {
+            self.bytecode.push(code as u8)
+        }
+    }
+
+    fn emit_byte(&mut self, byte: u8) {
+        print!("\t{:?} ", byte as i8);
+
+        if self.in_func {
+            self.functions.push(byte)
+        } else {
+            self.bytecode.push(byte)
+        }
+    }
+
+    fn emit_bytes(&mut self, bytes: &[u8]) {
+        print!("\t{:?} ", bytes.iter().map(|x| *x as i8).collect::<Vec<i8>>());
+
+        if self.in_func {
+            self.functions.extend(bytes)
+        } else {
+            self.bytecode.extend(bytes)
+        }
+    }
+}

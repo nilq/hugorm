@@ -1,0 +1,3 @@
+fn main(a):
+    let a = 10
+    a = 1200
