@@ -1,6 +1,3 @@
-<img src="https://i.ibb.co/vsRQftF/received-622991528467925.png" border="0" align="center" />
-<h1 align="center">Hugorm</h1>
-
 # Hugorm 🐍😎
 
 ```fs
