@@ -38,10 +38,10 @@ impl<'a> Compiler<'a> {
             self.compile_statement(statement)?
         }
 
+        self.emit(Op::Halt);
+
         self.functions_i = self.bytecode.len();
         self.bytecode.extend(self.functions.clone());
-
-        self.emit(Op::Halt);
 
         Ok(())
     }
@@ -74,10 +74,10 @@ impl<'a> Compiler<'a> {
         if let StatementNode::Function(ref name, ref params, ref body) = function.node {
             use self::StatementNode::*;
 
-            self.emit(Op::Jmp);
+            // self.emit(Op::Jmp);
 
-            let jump = self.bytecode.len();        // reference, for changing tmp address
-            self.emit_bytes(&to_bytes!(0 => u32)); // tmp address
+            // let jump = self.bytecode.len();        // reference, for changing tmp address
+            // self.emit_bytes(&to_bytes!(0 => u32)); // tmp address
 
             let function_address = &to_bytes!(self.functions.len() as u32 => u32);
 
@@ -97,27 +97,30 @@ impl<'a> Compiler<'a> {
 
             self.visitor.symtab.pop_cache();
 
-            println!("\n\n<function :: {}>", name);
+            print!("\n\n<function :: {}>\n", name);
+
+            self.emit(Op::PushF);
 
             for statement in body.iter() {
                 self.compile_statement(statement)?
             }
 
-            println!("\n");
+            self.emit(Op::PopF);
 
             let last = self.visitor.symtab.last.clone();
-
             self.visitor.symtab.cached_frames.push(last);
-
-            self.in_func = false;
 
             self.emit(Op::Ret);
 
-            let address = to_bytes!(self.functions.len() as u32 => u32);
+            println!("\n\n<END function :: main>\n");
 
-            for (i, byte) in address.iter().enumerate() {
-                self.bytecode[jump + i] = *byte
-            }
+            self.in_func = false;
+
+            // let address = to_bytes!(self.functions.len() as u32 => u32);
+
+            // for (i, byte) in address.iter().enumerate() {
+            //     self.bytecode[jump + i] = *byte
+            // }
 
             self.emit(Op::Push);
             self.emit_byte(4);
@@ -131,9 +134,14 @@ impl<'a> Compiler<'a> {
             self.emit(Op::Pop);
             self.emit_byte(4);
             self.emit_bytes(address);
-        }
 
-        Ok(())
+            let info = format!("\tfunc: {} @ {}", name, offset).blue();
+            print!("{}", info);
+
+            Ok(())
+        } else {
+            unreachable!()
+        }
     }
 
     pub fn compile_expression(&mut self, expression: &Expression) -> Result<(), ()> {
@@ -263,6 +271,9 @@ impl<'a> Compiler<'a> {
 
                     self.compile_function(&func, params)?;
                 }
+
+                self.compile_expression(caller)?;
+                self.emit(Op::Call);
             }
 
             _ => (),
@@ -284,6 +295,9 @@ impl<'a> Compiler<'a> {
         self.emit(Op::Pop);
         self.emit_byte(right_t.size().abs() as u8);
         self.emit_bytes(address);
+
+        let info = format!("\tvar: {} @ {}", left, offset).magenta();
+        print!("{}", info);
 
         Ok(())
     }

@@ -176,7 +176,11 @@ impl<'a> Visitor<'a> {
     }
 
     pub fn visit_expression(&mut self, expression: &Expression) -> Result<(), ()> {
-        Ok(())
+        use self::ExpressionNode::*;
+
+        match expression.node {
+            _ => Ok(())
+        }
     }
 
     pub fn type_expression(&mut self, expression: &Expression) -> Result<Type, ()> {
@@ -188,6 +192,9 @@ impl<'a> Visitor<'a> {
             Bool(_) => Type::from(TypeNode::Bool),
             Int(_) => Type::from(TypeNode::Int),
             Float(_) => Type::from(TypeNode::Float),
+
+            Call(..) => Type::from(TypeNode::Func), // TODO: lol
+
             Binary(ref left, ref op, ref right) => {
                 use self::Operator::*;
 
@@ -364,6 +371,7 @@ impl<'a> Visitor<'a> {
 
                 let mut t = self.type_expression(right.as_ref().unwrap())?;
 
+                println!("set offset {} = {}", name, offset);
                 t.set_offset((offset, depth));
 
                 let len = self.offsets.len();
@@ -379,14 +387,14 @@ impl<'a> Visitor<'a> {
     fn visit_ass(&mut self, ass: &StatementNode, pos: &Pos) -> Result<(), ()> {
         use self::ExpressionNode::*;
 
-        if let &StatementNode::Assignment(ref name, ref right) = ass {
-            
+        if let &StatementNode::Assignment(ref name, ref right) = ass {            
             if let ExpressionNode::Identifier(ref name) = name.node {
                 let left_t = self.symtab.fetch(name).unwrap();
                 let (offset, depth) = left_t.meta.unwrap().clone();
 
                 let mut t = self.type_expression(&right)?;
                 t.set_offset((offset, depth));
+
 
                 self.assign(name.to_owned(), t);
             }

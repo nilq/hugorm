@@ -11,10 +11,13 @@ use std::mem;
 
 fn main() {
     let test = r#"
-fn main():
-    let a = 10
+let a = 1
+let b = 2
+let c = 3
 
-main()
+fn main(): 10
+
+let d = main()
     "#;
 
     let source = Source::from("<test.hu>", test.lines().map(|x| x.into()).collect::<Vec<String>>());
@@ -51,10 +54,10 @@ main()
                     vm.exec(bytecode.as_slice(), compiler.functions_i);
 
                     println!("\n\n------- STACK -------");
-                    println!("{:?}", &vm.stack[0 .. 32]);
+                    println!("{:?}", &vm.stack[0 .. 48]);
 
                     println!("\n\n------- HEAP -------");
-                    println!("{:?}", &vm.vars[0 .. 32]);
+                    println!("{:?}", &vm.vars[0 .. 48]);
 
                     // let mut b: [u8; mem::size_of::<f64>()] = [0; mem::size_of::<f64>()];
                     // b.copy_from_slice(&vm.vars[0 .. 8]);

@@ -70,6 +70,7 @@ impl VM {
         let mut ip: u32 = 0;
 
         loop {
+            // print!("\nexec: {:?}", unsafe { mem::transmute::<u8, Op>(bytecode[ip as usize]) });
             match unsafe { mem::transmute::<u8, Op>(bytecode[ip as usize]) } {
                 Halt => {
                     break
@@ -105,9 +106,22 @@ impl VM {
 
                     memmove!(value => self.vars, [address + *self.frames.last().unwrap(); size as u32]);
           
-                    if self.vars_top < (address + self.frames.last().unwrap() + size as u32) {
-                        self.vars_top = address + self.frames.last().unwrap() + size as u32
+
+                    let new_top = (address + self.frames.last().unwrap() + size as u32);
+                    if self.vars_top < new_top {
+                        self.vars_top = new_top
                     }
+                },
+
+                PushF => {
+                    ip += 1;
+                    
+                    self.frames.push(self.vars_top)
+                },
+        
+                PopF => {
+                    ip += 1;
+                    self.vars_top = self.frames.pop().unwrap();
                 },
 
                 AddI => {
@@ -290,8 +304,8 @@ impl VM {
                     let size = bytecode[ip as usize];
             
                     ip += 1;
-            
-                    let address = from_bytes!(&bytecode[ip as usize .. ip as usize + 4] => u32) + self.frames[self.frames.len() - scope_offset as usize - 1];
+
+                    let address = from_bytes!(&bytecode[ip as usize .. ip as usize + 4] => u32) + self.frames[self.frames.len() - scope_offset as usize];
             
                     ip += 4;
             
@@ -302,7 +316,6 @@ impl VM {
 
                 Call => {
                     ip += 1;
-            
                     let address = pop!([&self.stack, self.stack_top] => u32) + functions as u32;    // the address of the called function
                     push!((&to_bytes!(ip => u32)) => self.calls, [self.calls_top; 4]); // address for the `ret` to return to
             
@@ -310,13 +323,13 @@ impl VM {
                 },
 
                 Ret => {
-                    ip = pop!([&self.calls, self.calls_top] => u32)
+                    ip = pop!([&self.calls, self.calls_top] => u32);
                 },
 
                 Jmp => {          
                     ip += 1;
             
-                    let address = from_bytes!(&bytecode[ip as usize .. ip as usize + 4] => u32) + functions as u32;
+                    let address = from_bytes!(&bytecode[ip as usize .. ip as usize + 4] => u32);
 
                     println!("\njumping from {} to {} :: out of {}\n", ip, address, bytecode.len());
 
