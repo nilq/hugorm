@@ -11,12 +11,11 @@ use std::mem;
 
 fn main() {
     let test = r#"
-fn main():
-    let brr = 10
-    let brr2 = 10
-    30
+let b = 1
+let b = 2
 
-let d = main()
+b = 6
+b
     "#;
 
     let source = Source::from("<test.hu>", test.lines().map(|x| x.into()).collect::<Vec<String>>());
@@ -57,14 +56,8 @@ let d = main()
                     println!("\n\n------- STACK -------");
                     println!("{:?}", &vm.stack[0 .. 48]);
 
-                    println!("\n\n------- HEAP -------");
+                    println!("\n\n------- VARS -------");
                     println!("{:?}", &vm.vars[0 .. 48]);
-
-                    // let mut b: [u8; mem::size_of::<f64>()] = [0; mem::size_of::<f64>()];
-                    // b.copy_from_slice(&vm.vars[0 .. 8]);
-
-                    // println!("\n--------------\n");
-                    // println!("human readable top: {:?}", unsafe { mem::transmute::<_, f64>(b) })
                 },
                 _ => (),
             }

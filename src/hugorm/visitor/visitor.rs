@@ -368,8 +368,14 @@ impl<'a> Visitor<'a> {
             if right.is_none() {
                 self.assign(name.to_owned(), Type::from(TypeNode::Nil))
             } else {
-                let offset = *self.offsets.last().unwrap();
-                let depth  = self.depth;
+                let (offset, depth) = if let Some(ref t) = self.symtab.fetch(name) {
+                    t.meta.unwrap()
+                } else {
+                    let offset = *self.offsets.last().unwrap();
+                    let depth  = self.depth;
+
+                    (offset, depth)
+                };
 
                 let mut t = self.type_expression(right.as_ref().unwrap())?;
 

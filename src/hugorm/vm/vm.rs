@@ -105,7 +105,6 @@ impl VM {
                     self.stack_top -= size as u32;
 
                     memmove!(value => self.vars, [address + *self.frames.last().unwrap(); size as u32]);
-          
 
                     let new_top = (address + self.frames.last().unwrap() + size as u32);
                     if self.vars_top < new_top {

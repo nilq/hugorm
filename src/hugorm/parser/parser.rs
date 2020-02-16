@@ -117,13 +117,15 @@ impl<'p> Parser<'p> {
                             vec!(self.parse_statement()?)
                         };
 
-                        Statement::new(
-                            StatementNode::Function(
-                                name,
-                                params,
-                                body
-                            ),
-                            new_pos
+                        return Ok(
+                            Statement::new(
+                                StatementNode::Function(
+                                    name,
+                                    params,
+                                    body
+                                ),
+                                new_pos
+                            )
                         )
                     } else {
                         unreachable!()
