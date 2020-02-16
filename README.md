@@ -16,7 +16,6 @@ let d = add(b, c)
 
 - [x] Fast bytecode VM
 - [x] Lazy compiler
-- [ ] Separate function stack
 - [ ] Run-time type information
 - [ ] Heap; arrays and tables
 - [ ] Flow-control
