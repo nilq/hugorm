@@ -16,11 +16,11 @@ let d = add(b, c)
 
 - [x] Fast bytecode VM
 - [x] Lazy compiler
-- [ ] Run-time type information
+- [ ] Rust functions
 - [ ] Heap; arrays and tables
+- [ ] Run-time type information
 - [ ] Flow-control
 - [ ] GC or lifetimes
-- [ ] Rust functions
 - [ ] Profit
 
 ## Q & A
