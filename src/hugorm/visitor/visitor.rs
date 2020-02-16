@@ -155,11 +155,13 @@ impl<'a> Visitor<'a> {
                 self.assign(name.to_owned(), t);
 
                 self.push_scope();
+                self.inside.push(Inside::Function);
 
                 for statement in body.iter() {
                     self.visit_statement(statement);
                 }
 
+                self.inside.pop();
                 self.pop_scope();
 
                 Ok(())

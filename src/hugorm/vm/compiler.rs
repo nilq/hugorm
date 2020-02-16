@@ -64,6 +64,19 @@ impl<'a> Compiler<'a> {
                 self.function_ast.insert(name.to_owned(), statement.clone());
             },
 
+            Return(ref expr) => {
+                if let Some(expr) = expr {
+                    self.compile_expression(expr)?;
+                }
+
+                self.emit(Op::PopF);
+
+                let last = self.visitor.symtab.last.clone();
+                self.visitor.symtab.cached_frames.push(last);
+
+                self.emit(Op::Ret);
+            }
+
             _ => (),
         }
 
@@ -97,22 +110,31 @@ impl<'a> Compiler<'a> {
 
             self.visitor.symtab.pop_cache();
 
-            print!("\n\n<function :: {}>\n", name);
+            let info = format!("\n\n<function :: {}>\n", name).blue();
+            print!("{}", info);
 
             self.emit(Op::PushF);
 
+            let mut found_early_return = false;
+
             for statement in body.iter() {
+                if let StatementNode::Return(..) = statement.node {
+                    found_early_return = true
+                }
+
                 self.compile_statement(statement)?
             }
 
-            self.emit(Op::PopF);
+            if !found_early_return {
+                self.emit(Op::PopF);
 
-            let last = self.visitor.symtab.last.clone();
-            self.visitor.symtab.cached_frames.push(last);
+                let last = self.visitor.symtab.last.clone();
+                self.visitor.symtab.cached_frames.push(last);
+    
+                self.emit(Op::Ret);                
+            }
 
-            self.emit(Op::Ret);
-
-            println!("\n\n<END function :: main>\n");
+            println!();
 
             self.in_func = false;
 
@@ -303,31 +325,34 @@ impl<'a> Compiler<'a> {
     }
 
     fn emit(&mut self, code: Op) {
-        print!("\n{:?}", code);
-
         if self.in_func {
+            let info = format!("\n{:?}", code).blue();
+            print!("{}", info);
             self.functions.push(code as u8)
         } else {
+            print!("\n{:?}", code);
             self.bytecode.push(code as u8)
         }
     }
 
     fn emit_byte(&mut self, byte: u8) {
-        print!("\t{:?} ", byte as i8);
-
         if self.in_func {
+            let info = format!("\t{:?} ", byte as i8).blue();
+            print!("{}", info);
             self.functions.push(byte)
         } else {
+            print!("\t{:?} ", byte as i8);
             self.bytecode.push(byte)
         }
     }
 
     fn emit_bytes(&mut self, bytes: &[u8]) {
-        print!("\t{:?} ", bytes.iter().map(|x| *x as i8).collect::<Vec<i8>>());
-
         if self.in_func {
+            let info = format!("\t{:?} ", bytes.iter().map(|x| *x as i8).collect::<Vec<i8>>()).blue();
+            print!("{}", info);
             self.functions.extend(bytes)
         } else {
+            print!("\t{:?} ", bytes.iter().map(|x| *x as i8).collect::<Vec<i8>>());
             self.bytecode.extend(bytes)
         }
     }

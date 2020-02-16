@@ -45,6 +45,26 @@ impl<'p> Parser<'p> {
 
         let statement = match self.current_type() {
             Keyword => match self.current_lexeme().as_str() {
+                "return" => {
+                    self.next()?;
+
+                    if self.current_lexeme() == "\n" {
+                        Statement::new(
+                            StatementNode::Return(
+                                None
+                            ),
+                            position
+                        )
+                    } else {
+                        Statement::new(
+                            StatementNode::Return(
+                                Some(self.parse_expression()?)
+                            ),
+                            self.span_from(position)
+                        )
+                    }
+                }
+
                 "let" => {
                     self.next()?;
 
@@ -91,6 +111,7 @@ impl<'p> Parser<'p> {
                         self.eat_lexeme(":")?;
 
                         let body = if self.current_lexeme() == "\n" {
+                            self.next()?;
                             self.parse_body()?
                         } else {
                             vec!(self.parse_statement()?)

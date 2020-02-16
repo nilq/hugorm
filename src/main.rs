@@ -11,11 +11,10 @@ use std::mem;
 
 fn main() {
     let test = r#"
-let a = 1
-let b = 2
-let c = 3
-
-fn main(): 10
+fn main():
+    let brr = 10
+    let brr2 = 10
+    30
 
 let d = main()
     "#;
@@ -44,6 +43,8 @@ let d = main()
 
             match visitor.visit() {
                 Ok(_) => {
+                    println!("\n--------------\n");
+
                     let mut compiler = Compiler::new(&mut visitor);
                     let mut vm = VM::new();
 
