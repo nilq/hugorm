@@ -16,6 +16,7 @@ let d = add(b, c)
 
 - [x] Fast bytecode VM
 - [x] Lazy compiler
+- [ ] Nan-tagging for better value representation
 - [ ] Rust functions
 - [ ] Heap; arrays and tables
 - [ ] Run-time type information
