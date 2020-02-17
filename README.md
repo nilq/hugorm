@@ -16,10 +16,9 @@ let d = add(b, c)
 
 - [x] Fast bytecode VM
 - [x] Lazy compiler
-- [ ] Nan-tagging for better value representation
+- [ ] Nan-tagging and RTTI
 - [ ] Rust functions
 - [ ] Heap; arrays and tables
-- [ ] Run-time type information
 - [ ] Flow-control
 - [ ] GC or lifetimes
 - [ ] Profit
