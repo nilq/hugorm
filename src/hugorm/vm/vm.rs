@@ -108,6 +108,7 @@ impl VM {
 
                     let new_top = (address + self.frames.last().unwrap() + size as u32);
                     if self.vars_top < new_top {
+                        println!("NEW TOP: {} vs {}", new_top, address);
                         self.vars_top = new_top
                     }
                 },

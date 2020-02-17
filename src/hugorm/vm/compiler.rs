@@ -34,9 +34,13 @@ impl<'a> Compiler<'a> {
     }
 
     pub fn compile(&mut self, ast: &Vec<Statement>) -> Result<(), ()> {
+        self.visitor.symtab.cache_mode = true;
+
         for statement in ast.iter() {
             self.compile_statement(statement)?
         }
+
+        self.visitor.symtab.cache_mode = false;
 
         self.emit(Op::Halt);
 

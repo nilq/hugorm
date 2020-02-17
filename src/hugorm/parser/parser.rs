@@ -100,36 +100,42 @@ impl<'p> Parser<'p> {
                     
                     let new_pos = self.span_from(position);
 
-                    self.expect_lexeme("(")?;
-                    self.next()?;
+                    self.eat_lexeme("(")?;
                     self.next_newline()?;
 
-                    let params = Vec::new();
+                    let mut params = Vec::new();
 
-                    if self.current_lexeme() == ")" {
-                        self.next()?;
-                        self.eat_lexeme(":")?;
+                    if self.current_lexeme() != ")" {
+                        params.push(self.eat_type(&TokenType::Identifier)?);
 
-                        let body = if self.current_lexeme() == "\n" {
+                        while self.current_lexeme() == "," {
                             self.next()?;
-                            self.parse_body()?
-                        } else {
-                            vec!(self.parse_statement()?)
-                        };
-
-                        return Ok(
-                            Statement::new(
-                                StatementNode::Function(
-                                    name,
-                                    params,
-                                    body
-                                ),
-                                new_pos
-                            )
-                        )
-                    } else {
-                        unreachable!()
+                            self.next_newline()?;
+                            
+                            params.push(self.eat_type(&TokenType::Identifier)?)
+                        }
                     }
+
+                    self.eat_lexeme(")")?;
+                    self.eat_lexeme(":")?;
+
+                    let body = if self.current_lexeme() == "\n" {
+                        self.next()?;
+                        self.parse_body()?
+                    } else {
+                        vec!(self.parse_statement()?)
+                    };
+
+                    return Ok(
+                        Statement::new(
+                            StatementNode::Function(
+                                name,
+                                params,
+                                body
+                            ),
+                            new_pos
+                        )
+                    )
                 }
 
                 _ => {

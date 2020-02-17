@@ -50,7 +50,7 @@ pub struct SymTab {
     pub stack: Vec<Frame>, // active frames
     pub cached_frames: Vec<Frame>,
     pub last: Frame,       // last frame
-
+    pub cache_mode: bool,
     pub foreign_imports: HashMap<String, HashMap<String, Type>>,
 }
 
@@ -59,9 +59,8 @@ impl SymTab {
         SymTab {
             stack: vec![Frame::new()],
             last: Frame::new(),
-
             cached_frames: Vec::new(),
-
+            cache_mode: false,
             foreign_imports: HashMap::new(),
         }
     }
@@ -71,7 +70,7 @@ impl SymTab {
             stack: vec![Frame::from(table)],
             last: Frame::new(),
             cached_frames: Vec::new(),
-
+            cache_mode: false,
             foreign_imports: HashMap::new(),
         }
     }
@@ -85,6 +84,10 @@ impl SymTab {
     }
 
     pub fn fetch(&self, name: &String) -> Option<Type> {
+        if self.cache_mode {
+            return self.fetch_cache(name)
+        }
+
         let mut offset = self.stack.len() - 1;
 
         loop {
@@ -101,7 +104,11 @@ impl SymTab {
     }
 
     pub fn fetch_str(&self, name: &str) -> Option<Type> {
-        self.fetch(&name.to_string())
+        if self.cache_mode {
+            self.fetch_cache(&name.to_string())
+        } else {
+            self.fetch(&name.to_string())
+        }
     }
 
     pub fn current_frame(&self) -> &Frame {

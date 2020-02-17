@@ -11,11 +11,10 @@ use std::mem;
 
 fn main() {
     let test = r#"
-let b = 1
-let b = 2
-
-b = 6
-b
+# milestone stuff
+let a = 10
+let b = a
+let c = a + b
     "#;
 
     let source = Source::from("<test.hu>", test.lines().map(|x| x.into()).collect::<Vec<String>>());

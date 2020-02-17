@@ -80,12 +80,9 @@ pub enum Inside {
 pub struct Visitor<'a> {
     pub source: &'a Source,
     pub ast: &'a Vec<Statement>,
-
     pub offsets: Vec<u32>,
     pub depth: u32,
-
     pub inside: Vec<Inside>,
-
     pub symtab: SymTab,
 }
 
@@ -94,9 +91,7 @@ impl<'a> Visitor<'a> {
         Visitor {
             source,
             ast,
-
             symtab: SymTab::new(),
-
             inside: Vec::new(),
             offsets: vec!(0),
             depth: 0,
