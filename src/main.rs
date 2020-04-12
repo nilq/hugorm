@@ -1,20 +1,24 @@
 extern crate colored;
+extern crate rustyline;
+extern crate broom;
+#[macro_use]
+extern crate nanbox;
+extern crate internment;
+extern crate cli_table;
 
 mod hugorm;
 use hugorm::lexer::*;
 use hugorm::source::*;
 use hugorm::parser::*;
-use hugorm::vm::*;
 use hugorm::visitor::*;
-
-use std::mem;
+use hugorm::vm::*;
 
 fn main() {
     let test = r#"
-# milestone stuff
 let a = 10
-let b = a
-let c = a + b
+let b = 20
+
+a
     "#;
 
     let source = Source::from("<test.hu>", test.lines().map(|x| x.into()).collect::<Vec<String>>());
@@ -41,22 +45,12 @@ let c = a + b
 
             match visitor.visit() {
                 Ok(_) => {
-                    println!("\n--------------\n");
+                    let program = compile(&ast);
+                    let mut vm       = VM::new();
 
-                    let mut compiler = Compiler::new(&mut visitor);
-                    let mut vm = VM::new();
+                    vm.exec(program);
 
-                    compiler.compile(&ast);
-
-                    let mut bytecode = compiler.bytecode;
-
-                    vm.exec(bytecode.as_slice(), compiler.functions_i);
-
-                    println!("\n\n------- STACK -------");
-                    println!("{:?}", &vm.stack[0 .. 48]);
-
-                    println!("\n\n------- VARS -------");
-                    println!("{:?}", &vm.vars[0 .. 48]);
+                    vm.visualize()
                 },
                 _ => (),
             }

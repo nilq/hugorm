@@ -20,7 +20,7 @@ pub enum TypeNode {
     Any,
     Char,
     Nil,
-    Func,
+    Func(usize),
     Id(Rc<Expression>),
 }
 
@@ -54,20 +54,6 @@ impl Type {
     pub fn set_offset(&mut self, offset: (u32, u32)) {
         self.meta = Some(offset)
     }
-
-    pub fn size(&self) -> i8 {
-        use self::TypeNode::*;
-
-        match self.node {
-            Int   => mem::size_of::<i32>() as i8,
-            Float => mem::size_of::<f64>() as i8,
-            Bool  => mem::size_of::<bool>() as i8,
-            Char  => mem::size_of::<char>() as i8,
-            Nil   => 0,
-            Func  => 4,
-            _     => panic!("no size yet."),
-        }
-    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -92,6 +78,17 @@ impl<'a> Visitor<'a> {
             source,
             ast,
             symtab: SymTab::new(),
+            inside: Vec::new(),
+            offsets: vec!(0),
+            depth: 0,
+        }
+    }
+
+    pub fn from(source: &'a Source, ast: &'a Vec<Statement>, symtab: SymTab) -> Self {
+        Visitor {
+            source,
+            ast,
+            symtab,
             inside: Vec::new(),
             offsets: vec!(0),
             depth: 0,
@@ -140,12 +137,12 @@ impl<'a> Visitor<'a> {
                 let offset = *self.offsets.last().unwrap();
                 let depth  = self.depth;
 
-                let mut t = Type::from(TypeNode::Func);
+                let mut t = Type::from(TypeNode::Func(params.len()));
 
                 t.set_offset((offset, depth));
 
                 let len = self.offsets.len();
-                self.offsets[len - 1] += 8 as u32;
+                self.offsets[len - 1] += 1;
 
                 self.assign(name.to_owned(), t);
 
@@ -153,7 +150,7 @@ impl<'a> Visitor<'a> {
                 self.inside.push(Inside::Function);
 
                 for statement in body.iter() {
-                    self.visit_statement(statement);
+                    self.visit_statement(statement)?
                 }
 
                 self.inside.pop();
@@ -176,6 +173,28 @@ impl<'a> Visitor<'a> {
         use self::ExpressionNode::*;
 
         match expression.node {
+            Call(ref caller, ref args) => {
+                let caller_t = self.type_expression(caller)?.node;
+
+                if let TypeNode::Func(ref params) = caller_t {
+                    if *params != args.len() {
+                        return Err(response!(
+                            Wrong(format!("wrong amount of arguments, expected {} but got {}", params, args.len())),
+                            self.source.file,
+                            caller.pos
+                        ))
+                    }
+                } else {
+                    return Err(response!(
+                        Wrong(format!("trying to call non-function: `{:?}`", caller_t)),
+                        self.source.file,
+                        caller.pos
+                    ))
+                }
+
+                Ok(())
+            },
+
             _ => Ok(())
         }
     }
@@ -189,9 +208,6 @@ impl<'a> Visitor<'a> {
             Bool(_) => Type::from(TypeNode::Bool),
             Int(_) => Type::from(TypeNode::Int),
             Float(_) => Type::from(TypeNode::Float),
-
-            Call(..) => Type::from(TypeNode::Func), // TODO: lol
-
             Binary(ref left, ref op, ref right) => {
                 use self::Operator::*;
 
@@ -293,17 +309,6 @@ impl<'a> Visitor<'a> {
                         Concat => {
                             if *a == TypeNode::Str {
                                 match *b {
-                                    // TypeNode::Func(..) | TypeNode::Array(..) => {
-                                    //     return Err(response!(
-                                    //         Wrong(format!(
-                                    //             "can't perform operation `{:?} {} {:?}`",
-                                    //             a, op, b
-                                    //         )),
-                                    //         self.source.file,
-                                    //         expression.pos
-                                    //     ))
-                                    // }
-
                                     _ => Type::from(TypeNode::Str),
                                 }
                             } else {
@@ -348,7 +353,9 @@ impl<'a> Visitor<'a> {
                     self.source.file,
                     expression.pos
                 ))
-            }
+            },
+
+            Call(ref caller, ref args) => Type::from(TypeNode::Any),
 
             _ => Type::from(TypeNode::Nil),
         };
@@ -378,7 +385,7 @@ impl<'a> Visitor<'a> {
                 t.set_offset((offset, depth));
 
                 let len = self.offsets.len();
-                self.offsets[len - 1] += 8 as u32;
+                self.offsets[len - 1] += 1;
 
                 self.assign(name.to_owned(), t);
             }
