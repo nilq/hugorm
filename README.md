@@ -17,17 +17,23 @@ Hugorm is a dynamic scripting language designed for mission-critical development
 Currently the language is in the early stages, so here's a generic example:
 
 ```fs
-let tensor = [1, 2, 3, 4]
+fun foo(x):
+  return x^3 + 2x^2 - 10
 
-fun normalize(a):
-    let len = 0
-    
-    for n in a:
-      len += a^2
-    
-    len^0.5
+fun foo'(x):
+  return 3x^2 + 4x
+```
 
-normalize(tensor)
+And a more exotic example:
+
+```fs
+interface Move:
+  fun move(self, dx, dy):
+    self.x += dx
+    self.y += dy
+
+let snake = {} with Move
+snake\move(10, 10) // Calling method with `self` being snake
 ```
 
 ## The future
