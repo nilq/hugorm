@@ -1,0 +1,4 @@
+fun main():
+    return 10
+
+main(a)

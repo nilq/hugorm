@@ -4,21 +4,24 @@ extern crate broom;
 #[macro_use]
 extern crate nanbox;
 extern crate internment;
-extern crate cli_table;
+extern crate fnv;
 
 mod hugorm;
 use hugorm::lexer::*;
 use hugorm::source::*;
 use hugorm::parser::*;
 use hugorm::visitor::*;
-use hugorm::vm::*;
+
+use colored::Colorize;
 
 fn main() {
     let test = r#"
-let a = 10
-let b = 20
+fun ø'(æ, ø, å):
+    let test-depth = 10
 
-a
+    return æ + ø + å
+
+ø'(1, r"hello \n with escapes", 3)
     "#;
 
     let source = Source::from("<test.hu>", test.lines().map(|x| x.into()).collect::<Vec<String>>());
@@ -45,12 +48,7 @@ a
 
             match visitor.visit() {
                 Ok(_) => {
-                    let program = compile(&ast);
-                    let mut vm       = VM::new();
-
-                    vm.exec(program);
-
-                    vm.visualize()
+                    println!("{}", "We're good".green())
                 },
                 _ => (),
             }

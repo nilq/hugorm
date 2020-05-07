@@ -11,6 +11,8 @@ use std::io::prelude::*;
 use std::path::Path;
 use std::mem;
 
+pub type VarPos = (usize, usize);
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum TypeNode {
     Int,
@@ -35,7 +37,7 @@ pub enum TypeMode {
 pub struct Type {
     pub node: TypeNode,
     pub mode: TypeMode,
-    pub meta: Option<(u32, u32)>
+    pub meta: Option<VarPos>
 }
 
 impl Type {
@@ -51,7 +53,7 @@ impl Type {
         Type::new(node, TypeMode::Regular)
     }
 
-    pub fn set_offset(&mut self, offset: (u32, u32)) {
+    pub fn set_offset(&mut self, offset: VarPos) {
         self.meta = Some(offset)
     }
 }
@@ -66,8 +68,8 @@ pub enum Inside {
 pub struct Visitor<'a> {
     pub source: &'a Source,
     pub ast: &'a Vec<Statement>,
-    pub offsets: Vec<u32>,
-    pub depth: u32,
+    pub function_depth: usize,
+    pub depth: usize,
     pub inside: Vec<Inside>,
     pub symtab: SymTab,
 }
@@ -79,8 +81,8 @@ impl<'a> Visitor<'a> {
             ast,
             symtab: SymTab::new(),
             inside: Vec::new(),
-            offsets: vec!(0),
             depth: 0,
+            function_depth: 0,
         }
     }
 
@@ -90,19 +92,19 @@ impl<'a> Visitor<'a> {
             ast,
             symtab,
             inside: Vec::new(),
-            offsets: vec!(0),
             depth: 0,
+            function_depth: 0,
         }
     }
 
     pub fn visit(&mut self) -> Result<(), ()> {
-        self.push_scope();
+        self.symtab.push(); // can't push_scope, cause it increases depth - that's wack, def don't want that
 
         for statement in self.ast.iter() {
             self.visit_statement(&statement)?
         }
 
-        self.pop_scope();
+        self.symtab.pop(); // cleaning up. don't pop_scope
 
         Ok(())
     }
@@ -134,18 +136,13 @@ impl<'a> Visitor<'a> {
             },
 
             Function(ref name, ref params, ref body) => {
-                let offset = *self.offsets.last().unwrap();
-                let depth  = self.depth;
-
                 let mut t = Type::from(TypeNode::Func(params.len()));
 
-                t.set_offset((offset, depth));
-
-                let len = self.offsets.len();
-                self.offsets[len - 1] += 1;
+                t.set_offset((self.depth, self.function_depth));
 
                 self.assign(name.to_owned(), t);
 
+                self.function_depth += 1;
                 self.push_scope();
                 self.inside.push(Inside::Function);
 
@@ -155,6 +152,7 @@ impl<'a> Visitor<'a> {
 
                 self.inside.pop();
                 self.pop_scope();
+                self.function_depth -= 1;
 
                 Ok(())
             }
@@ -367,25 +365,27 @@ impl<'a> Visitor<'a> {
         use self::ExpressionNode::*;
 
         if let &StatementNode::Declaration(ref name, ref right) = variable {
+            if name.as_str().chars().last().unwrap() == '-' {
+                response!(
+                    Weird("kebab-case at identifier end is not cool"),
+                    self.source.file,
+                    pos
+                )
+            }
+
             if right.is_none() {
                 self.assign(name.to_owned(), Type::from(TypeNode::Nil))
             } else {
-                let (offset, depth) = if let Some(ref t) = self.symtab.fetch(name) {
+                let (depth, function_depth) = if let Some(ref t) = self.symtab.fetch(name) {
                     t.meta.unwrap()
                 } else {
-                    let offset = *self.offsets.last().unwrap();
-                    let depth  = self.depth;
-
-                    (offset, depth)
+                    (self.depth, self.function_depth)
                 };
 
                 let mut t = self.type_expression(right.as_ref().unwrap())?;
 
-                println!("set offset {} = {}", name, offset);
-                t.set_offset((offset, depth));
-
-                let len = self.offsets.len();
-                self.offsets[len - 1] += 1;
+                println!("set {} @ depth({}) funcs({})", name, depth, function_depth);
+                t.set_offset((depth, function_depth));
 
                 self.assign(name.to_owned(), t);
             }
@@ -423,14 +423,12 @@ impl<'a> Visitor<'a> {
 
     fn push_scope(&mut self) {
         self.symtab.push();
-        self.offsets.push(0);
         
         self.depth += 1
     }
 
     fn pop_scope(&mut self) {
         self.symtab.pop();
-        self.offsets.pop();
 
         self.depth -= 1
     }

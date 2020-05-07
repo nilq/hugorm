@@ -93,7 +93,7 @@ impl<'p> Parser<'p> {
                     }
                 }
 
-                "fn" => {
+                "fun" => {
                     self.next()?;
 
                     let name = self.eat_type(&TokenType::Identifier)?;

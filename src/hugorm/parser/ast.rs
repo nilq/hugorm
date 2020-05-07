@@ -31,6 +31,7 @@ impl Statement {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ExpressionNode {
+  Nil,
   Int(i32),
   Float(f64),
   Str(String),

@@ -144,7 +144,6 @@ impl<'t> Matcher<'t> for StringLiteralMatcher {
 
         let delimeter = match tokenizer.peek().unwrap() {
             '"' => '"',
-            '\'' => '\'',
             'r' => {
                 if tokenizer.peek_n(1) == Some('"') {
                     raw_marker = true;
@@ -153,23 +152,6 @@ impl<'t> Matcher<'t> for StringLiteralMatcher {
                     pos = tokenizer.pos;
 
                     '"'
-                } else if tokenizer.peek_n(1) == Some('\'') {
-                    return Err(response!(
-                        Wrong("no such thing as a raw character literal"),
-                        tokenizer.source.file,
-                        Pos(
-                            (
-                                pos.0,
-                                tokenizer
-                                    .source
-                                    .lines
-                                    .get(pos.0.saturating_sub(1))
-                                    .unwrap_or(tokenizer.source.lines.last().unwrap())
-                                    .to_string()
-                            ),
-                            (pos.1 - 1, pos.1),
-                        )
-                    ));
                 } else {
                     return Ok(None);
                 }
@@ -210,7 +192,7 @@ impl<'t> Matcher<'t> for StringLiteralMatcher {
                 string.push(tokenizer.next().unwrap())
             } else if found_escape {
                 string.push(match tokenizer.next().unwrap() {
-                    c @ '\\' | c @ '\'' | c @ '"' => c,
+                    c @ '"' => c,
                     'n' => '\n',
                     'r' => '\r',
                     't' => '\t',
@@ -260,41 +242,13 @@ impl<'t> Matcher<'t> for StringLiteralMatcher {
 
         tokenizer.advance();
 
-        if delimeter == '"' {
-            let mut token = token!(tokenizer, Str, string);
+        let mut token = token!(tokenizer, Str, string);
 
-            if raw_marker {
-                token.slice.1 += 1
-            }
-
-            Ok(Some(token))
-        } else {
-            if string.len() > 1 {
-                let pos = tokenizer.last_position();
-
-                Err(response!(
-                    Wrong("char literals may not contain more than one codepoint"),
-                    tokenizer.source.file,
-                    Pos(
-                        (
-                            pos.0,
-                            tokenizer
-                                .source
-                                .lines
-                                .get(pos.0.saturating_sub(1))
-                                .unwrap_or(tokenizer.source.lines.last().unwrap())
-                                .to_string()
-                        ),
-                        (
-                            pos.1 + 2,
-                            pos.1 + string.len() + 1 + if raw_marker { 1 } else { 0 }
-                        ),
-                    )
-                ))
-            } else {
-                Ok(Some(token!(tokenizer, Char, string)))
-            }
+        if raw_marker {
+            token.slice.1 += 1
         }
+
+        Ok(Some(token))
     }
 }
 
@@ -304,11 +258,11 @@ impl<'t> Matcher<'t> for IdentifierMatcher {
     fn try_match(&self, tokenizer: &mut Tokenizer<'t>) -> Result<Option<Token>, ()> {
         let peeked = tokenizer.peek().unwrap();
 
-        if !peeked.is_alphabetic() && peeked != '_' {
+        if !peeked.is_alphabetic() && ['_', '\''].contains(&peeked) {
             return Ok(None);
         }
 
-        let accum = tokenizer.collect_while(|c| c.is_alphanumeric() || "_-".contains(c));
+        let accum = tokenizer.collect_while(|c| c.is_alphanumeric() || "_-'".contains(c));
 
         if accum.is_empty() {
             Ok(None)
