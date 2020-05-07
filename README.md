@@ -18,10 +18,10 @@ Currently the language is in the early stages, so here's a generic example:
 
 ```fs
 fun foo(x):
-  return x^3 + 2x^2 - 10
+  return x^3 + 2 * x^2 - 10
 
 fun foo'(x):
-  return 3x^2 + 4x
+  return 3 * x^2 + 4 * x
 ```
 
 And a more exotic example:
