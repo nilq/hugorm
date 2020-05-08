@@ -38,7 +38,7 @@ snake\move(10, 10) // Calling method with `self` being snake
 
 Compile-time programming:
 
-```fs
+```kotlin
 const foo = 100 + 100
 
 const fun bar(b):
