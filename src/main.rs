@@ -16,15 +16,19 @@ use colored::Colorize;
 
 fn main() {
     let test = r#"
-fun ø'(æ, ø, å):
-    let test-depth = 10
+let aaa = {
+    fruit: "hey",
+    tis: "semand",
+}
 
-    return æ + ø + å
+interface YesBoi:
+    fun ølle-brød(self):
+        return r"hey\n"
 
-ø'(1, r"hello \n with escapes", 3)
+let snake = {} with YesBoi
     "#;
 
-    let source = Source::from("<test.hu>", test.lines().map(|x| x.into()).collect::<Vec<String>>());
+    let source = Source::from("<test.hug>", test.lines().map(|x| x.into()).collect::<Vec<String>>());
     let lexer = Lexer::default(test.chars().collect(), &source);
 
     let mut tokens = Vec::new();

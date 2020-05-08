@@ -35,7 +35,10 @@ impl<'l> Lexer<'l> {
             &[
                 "fun",
                 "let",
-                "return"
+                "return",
+                "interface",
+                "with",
+                "nil"
             ],
         )));
 

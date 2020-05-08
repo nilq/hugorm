@@ -136,7 +136,45 @@ impl<'p> Parser<'p> {
                             new_pos
                         )
                     )
-                }
+                },
+
+                "interface" => {
+                    self.next()?;
+
+                    let name = self.eat_type(&TokenType::Identifier)?;
+                    let new_pos = self.span_from(position);
+
+                    self.eat_lexeme(":")?;
+
+                    let body = if self.current_lexeme() == "\n" {
+                        self.next()?;
+                        self.parse_body()?
+                    } else {
+                        vec!(self.parse_statement()?)
+                    };
+
+                    for s in body.iter() {
+                        if let StatementNode::Function(..) = s.node {
+                            continue
+                        } else {
+                            return Err(response!(
+                                Wrong(format!("can't interface non-function")),
+                                self.source.file,
+                                s.pos
+                            ));
+                        }
+                    }
+
+                    return Ok(
+                        Statement::new(
+                            StatementNode::Interface(
+                                name,
+                                body
+                            ),
+                            new_pos
+                        )
+                    )
+                },
 
                 _ => {
                     let expression = self.parse_expression()?;
@@ -329,6 +367,27 @@ impl<'p> Parser<'p> {
                         }
                     }
 
+                    "[" => {
+                        let expr = Expression::new(
+                            ExpressionNode::Array(
+                                self.parse_block_of(("[", "]"), &Self::_parse_expression_comma)?,
+                            ),
+                            self.span_from(position),
+                        );
+
+                        expr
+                    },
+
+                    "{" => {
+                        let args =
+                                self.parse_block_of(("{", "}"), &Self::_parse_definition_comma)?;
+
+                        Expression::new(
+                            ExpressionNode::Dict(args),
+                            self.span_from(position)
+                        )
+                    },
+
                     ref c => {
                         return Err(response!(
                             Wrong(format!("unexpected symbol `{}`", c)),
@@ -336,6 +395,19 @@ impl<'p> Parser<'p> {
                             self.current_position()
                         ))
                     }
+                },
+
+                Keyword => match self.current_lexeme().as_str() {
+                    "nil" => Expression::new(
+                        ExpressionNode::Nil,
+                        position
+                    ),
+
+                    c => return Err(response!(
+                        Wrong(format!("unexpected keyword `{}`", c)),
+                        self.source.file,
+                        self.current_position()
+                    ))
                 },
 
                 ref token_type => {
@@ -363,44 +435,62 @@ impl<'p> Parser<'p> {
         }
 
         match self.current_type() {
-            ref current => {
-                if let TokenType::Symbol = current {
-                    if self.current_lexeme() == "(" {
-                        self.next()?;
-                        self.next_newline()?;
+            TokenType::Symbol => {
+                if self.current_lexeme() == "(" {
+                    self.next()?;
+                    self.next_newline()?;
 
-                        let mut args = Vec::new();
+                    let mut args = Vec::new();
 
-                        if ![TokenType::Operator, TokenType::Keyword].contains(&self.current_type())
-                        {
-                            while !["\n", ")"].contains(&self.current_lexeme().as_str()) {
-                                args.push(self.parse_expression()?);
+                    if ![TokenType::Operator, TokenType::Keyword].contains(&self.current_type())
+                    {
+                        while !["\n", ")"].contains(&self.current_lexeme().as_str()) {
+                            args.push(self.parse_expression()?);
 
-                                if !["\n", ")"].contains(&self.current_lexeme().as_str())
-                                    && self.remaining() > 0
-                                {
-                                    self.eat_lexeme(",")?;
-                                    self.next_newline()?;
-                                }
+                            if !["\n", ")"].contains(&self.current_lexeme().as_str())
+                                && self.remaining() > 0
+                            {
+                                self.eat_lexeme(",")?;
+                                self.next_newline()?;
                             }
                         }
-
-                        self.next_newline()?;
-                        self.eat_lexeme(")")?;
-
-                        let position = expression.pos.clone();
-
-                        return Ok(Expression::new(
-                            ExpressionNode::Call(Rc::new(expression), args),
-                            self.span_from(position),
-                        ));
                     }
+
+                    self.next_newline()?;
+                    self.eat_lexeme(")")?;
+
+                    let position = expression.pos.clone();
+
+                    return Ok(Expression::new(
+                        ExpressionNode::Call(Rc::new(expression), args),
+                        self.span_from(position),
+                    ));
+                } else {
+                    Ok(expression)
+                }
+            },
+
+            TokenType::Keyword => match self.current_lexeme().as_str() {
+                "with" => {
+                    self.next()?;
+
+                    let with = self.parse_expression()?;
+
+                    let pos = expression.pos.clone();
+
+                    return Ok(Expression::new(
+                        ExpressionNode::With(Rc::new(expression), Rc::new(with)),
+                        self.span_from(pos)
+                    ))
                 }
 
-                Ok(expression)
+                _ => {
+                    self.index = backup_index;
+                    Ok(expression)
+                }
             }
 
-            _ => Ok(expression),
+            _ => Ok(expression)
         }
     }
 
@@ -630,6 +720,142 @@ impl<'p> Parser<'p> {
                 )),
                 self.source.file
             ))
+        }
+    }
+
+
+
+    fn _parse_statement(self: &mut Self) -> Result<Option<Statement>, ()> {
+        if self.remaining() > 0 {
+            Ok(Some(self.parse_statement()?))
+        } else {
+            Ok(None)
+        }
+    }
+
+    fn _parse_expression(self: &mut Self) -> Result<Option<Expression>, ()> {
+        let expression = self.parse_expression()?;
+
+        match expression.node {
+            ExpressionNode::EOF => Ok(None),
+            _ => Ok(Some(expression)),
+        }
+    }
+
+    fn _parse_expression_comma(self: &mut Self) -> Result<Option<Expression>, ()> {
+        if self.remaining() > 0 && self.current_lexeme() == "\n" {
+            self.next()?
+        }
+
+        let expression = Self::_parse_expression(self);
+
+        if self.remaining() > 0 && self.current_lexeme() == "\n" {
+            self.next()?
+        }
+
+        if self.remaining() > 0 {
+            self.eat_lexeme(",")?;
+
+            if self.remaining() > 0 && self.current_lexeme() == "\n" {
+                self.next()?
+            }
+        }
+
+        expression
+    }
+
+    fn _parse_definition_comma(self: &mut Self) -> Result<Option<(String, Expression)>, ()> {
+        if self.remaining() > 0 && self.current_lexeme() == "\n" {
+            self.next()?
+        }
+
+        if self.remaining() == 0 {
+            return Ok(None);
+        }
+
+        let position = self.current_position();
+
+        let name = self.eat_type(&TokenType::Identifier)?;
+
+        self.eat_lexeme(":")?;
+
+        let mut value = self.parse_expression()?;
+
+        value.pos = position;
+
+        let param = Some((name, value));
+
+        if self.remaining() > 0 {
+            if ![",", "\n"].contains(&self.current_lexeme().as_str()) {
+                return Err(response!(
+                    Wrong(format!(
+                        "expected `,` or newline, found `{}`",
+                        self.current_lexeme()
+                    )),
+                    self.source.file,
+                    self.current_position()
+                ));
+            } else {
+                self.next()?;
+            }
+
+            if self.remaining() > 0 && self.current_lexeme() == "\n" {
+                self.next()?
+            }
+        }
+
+        Ok(param)
+    }
+
+
+
+    fn parse_block_of<B>(
+        &mut self,
+        delimeters: (&str, &str),
+        parse_with: &dyn Fn(&mut Self) -> Result<Option<B>, ()>,
+    ) -> Result<Vec<B>, ()> {
+        self.eat_lexeme(delimeters.0)?;
+
+        if self.current_lexeme() == delimeters.1 {
+            self.next()?;
+
+            return Ok(Vec::new());
+        }
+
+        let mut block_tokens = Vec::new();
+        let mut nest_count = 1;
+
+        while nest_count > 0 {
+            if self.current_lexeme() == delimeters.1 && self.current_type() == TokenType::Symbol {
+                nest_count -= 1
+            } else if self.current_lexeme() == delimeters.0
+                && self.current_type() == TokenType::Symbol
+            {
+                nest_count += 1
+            }
+
+            if nest_count == 0 {
+                break;
+            } else {
+                block_tokens.push(self.current());
+
+                self.next()?;
+            }
+        }
+
+        self.eat_lexeme(delimeters.1)?;
+
+        if !block_tokens.is_empty() {
+            let mut parser = Parser::new(block_tokens, self.source);
+            let mut block = Vec::new();
+
+            while let Some(element) = parse_with(&mut parser)? {
+                block.push(element)
+            }
+
+            Ok(block)
+        } else {
+            Ok(Vec::new())
         }
     }
 }

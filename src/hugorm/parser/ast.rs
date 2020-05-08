@@ -10,6 +10,7 @@ pub enum StatementNode {
   Assignment(Expression, Expression),
   Function(String, Vec<String>, Vec<Statement>),
   Return(Option<Expression>),
+  Interface(String, Vec<Statement>),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -37,11 +38,13 @@ pub enum ExpressionNode {
   Str(String),
   Identifier(String),
   Bool(bool),
-  Char(char),
   Neg(Rc<Expression>), // -
   Not(Rc<Expression>), // not
   Binary(Rc<Expression>, Operator, Rc<Expression>),
   Call(Rc<Expression>, Vec<Expression>),
+  Array(Vec<Expression>),
+  Dict(Vec<(String, Expression)>),
+  With(Rc<Expression>, Rc<Expression>),
   Empty,
   EOF,
 }

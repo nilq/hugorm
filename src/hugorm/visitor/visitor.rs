@@ -23,7 +23,6 @@ pub enum TypeNode {
     Char,
     Nil,
     Func(usize),
-    Id(Rc<Expression>),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -155,6 +154,10 @@ impl<'a> Visitor<'a> {
                 self.function_depth -= 1;
 
                 Ok(())
+            },
+
+            Interface(..) => {
+                Ok(())
             }
 
             _ => {
@@ -193,6 +196,22 @@ impl<'a> Visitor<'a> {
                 Ok(())
             },
 
+            Array(ref content) => {
+                for element in content.iter() {
+                    self.visit_expression(element)?
+                }
+
+                Ok(())
+            },
+
+            Dict(ref content) => {
+                for (_, value) in content.iter() {
+                    self.visit_expression(value)?
+                }
+
+                Ok(())
+            },
+
             _ => Ok(())
         }
     }
@@ -202,7 +221,6 @@ impl<'a> Visitor<'a> {
 
         let t = match expression.node {
             Str(_) => Type::from(TypeNode::Str),
-            Char(_) => Type::from(TypeNode::Char),
             Bool(_) => Type::from(TypeNode::Bool),
             Int(_) => Type::from(TypeNode::Int),
             Float(_) => Type::from(TypeNode::Float),
