@@ -36,6 +36,21 @@ let snake = {} with Move
 snake\move(10, 10) // Calling method with `self` being snake
 ```
 
+Compile-time programming:
+
+```fs
+const foo = 100 + 100
+
+const fun bar(b):
+  if b == true:
+    return "ok hello"
+  else:
+    return "ok hello but false"
+
+const baz = bar(true)
+```
+
+
 ## The future
 
 - Gradual typing
