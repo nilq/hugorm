@@ -137,13 +137,22 @@ impl<'a> Visitor<'a> {
             Function(ref name, ref params, ref body) => {
                 let mut t = Type::from(TypeNode::Func(params.len()));
 
-                t.set_offset((self.depth, self.function_depth));
+                println!("set func {} @ {} {}", name, self.depth, self.function_depth);
 
+                t.set_offset((self.depth, self.function_depth));
                 self.assign(name.to_owned(), t);
+
 
                 self.function_depth += 1;
                 self.push_scope();
                 self.inside.push(Inside::Function);
+
+                for param in params.iter() {
+                    let mut t = Type::from(TypeNode::Any);
+                    t.set_offset((self.depth, self.function_depth));
+
+                    self.assign(param.clone(), t)
+                }
 
                 for statement in body.iter() {
                     self.visit_statement(statement)?
@@ -156,9 +165,25 @@ impl<'a> Visitor<'a> {
                 Ok(())
             },
 
-            Interface(..) => {
+            Interface(_, ref content) => {
+                for fun in content.iter() {
+                    self.visit_statement(fun)?
+                }
+
                 Ok(())
             }
+
+            Const(..) => return Err(response!(
+                Wrong("constants are not implemented yet"),
+                self.source.file,
+                position
+            )),
+
+            ConstFunction(ref fun) => return Err(response!(
+                Wrong("constants are not implemented yet"),
+                self.source.file,
+                position
+            )),
 
             _ => {
                 return Err(response!(
@@ -417,14 +442,22 @@ impl<'a> Visitor<'a> {
 
         if let &StatementNode::Assignment(ref name, ref right) = ass {            
             if let ExpressionNode::Identifier(ref name) = name.node {
-                let left_t = self.symtab.fetch(name).unwrap();
-                let (offset, depth) = left_t.meta.unwrap().clone();
 
-                let mut t = self.type_expression(&right)?;
-                t.set_offset((offset, depth));
-
-
-                self.assign(name.to_owned(), t);
+                if let Some(left_t) = self.symtab.fetch(name) {
+                    let (offset, depth) = left_t.meta.unwrap().clone();
+    
+                    let mut t = self.type_expression(&right)?;
+                    t.set_offset((offset, depth));
+    
+    
+                    self.assign(name.to_owned(), t);
+                } else {
+                    return Err(response!(
+                        Wrong(format!("can't assign non-existent `{}`", name)),
+                        self.source.file,
+                        pos
+                    ))
+                }
             }
         }
 

@@ -42,6 +42,10 @@ snake\move(10, 10) // Calling method with `self` being snake
 - First class things: tensors, graphics stuff
 - More speed
 
+## Notes
+
+- The symbol table should store IR bindings rather than `(usize, usize)`
+
 ## License
 
 MIT

@@ -93,6 +93,33 @@ impl<'p> Parser<'p> {
                     }
                 }
 
+                "const" => {
+                    self.next()?;
+
+                    if self.current_lexeme() == "fun" {
+                        Statement::new(
+                            StatementNode::ConstFunction(
+                                Rc::new(self.parse_statement()?)
+                            ),
+                            self.span_from(position)
+                        )
+                    } else {
+                        let name = self.eat_type(&TokenType::Identifier)?;
+
+                        self.eat_lexeme("=")?;
+
+                        let right = self.parse_expression()?;
+
+                        Statement::new(
+                            StatementNode::Declaration(
+                                name,
+                                Some(right)
+                            ),
+                            self.span_from(position)
+                        )
+                    }
+                }
+
                 "fun" => {
                     self.next()?;
 

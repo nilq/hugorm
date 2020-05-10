@@ -1,31 +1,30 @@
 extern crate colored;
 extern crate rustyline;
-extern crate broom;
-#[macro_use]
-extern crate nanbox;
-extern crate internment;
-extern crate fnv;
+extern crate zub;
 
 mod hugorm;
 use hugorm::lexer::*;
 use hugorm::source::*;
 use hugorm::parser::*;
 use hugorm::visitor::*;
+use hugorm::ir::*;
+
+use zub::vm::*;
 
 use colored::Colorize;
 
 fn main() {
     let test = r#"
-let aaa = {
-    fruit: "hey",
-    tis: "semand",
-}
+fun print(a): return
 
-interface YesBoi:
-    fun ølle-brød(self):
-        return r"hey\n"
+fun foo(a):
+    let b = a
 
-let snake = {} with YesBoi
+    print(b)
+
+    return b
+
+let bar = foo(10.0)
     "#;
 
     let source = Source::from("<test.hug>", test.lines().map(|x| x.into()).collect::<Vec<String>>());
@@ -44,7 +43,7 @@ let snake = {} with YesBoi
     let mut parser = Parser::new(tokens, &source);
 
     match parser.parse() {
-        Ok(ref ast) => {
+        Ok(ast) => {
             println!("{:#?}", ast);
             println!("\n--------------\n");
 
@@ -52,7 +51,23 @@ let snake = {} with YesBoi
 
             match visitor.visit() {
                 Ok(_) => {
-                    println!("{}", "We're good".green())
+                    println!("{}", "We're good".green());
+
+                    let mut compiler = Compiler::new(&mut visitor);
+
+                    compiler.compile(ast.clone()).unwrap();
+                    
+                    fn print(heap: &Heap<Object>, args: &[Value]) -> Value {
+                        println!("{}", args[1].with_heap(heap));
+                        Value::nil()
+                    }
+
+                    let mut vm = VM::new();
+                    vm.add_native("print", print, 1);
+
+                    let ir = compiler.build();
+
+                    vm.exec(&ir, true);
                 },
                 _ => (),
             }

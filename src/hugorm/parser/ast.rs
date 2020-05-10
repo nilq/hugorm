@@ -7,6 +7,8 @@ use super::*;
 pub enum StatementNode {
   Expression(Expression),
   Declaration(String, Option<Expression>),
+  Const(String, Expression),
+  ConstFunction(Rc<Statement>),
   Assignment(Expression, Expression),
   Function(String, Vec<String>, Vec<Statement>),
   Return(Option<Expression>),

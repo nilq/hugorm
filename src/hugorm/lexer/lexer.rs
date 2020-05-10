@@ -38,6 +38,7 @@ impl<'l> Lexer<'l> {
                 "return",
                 "interface",
                 "with",
+                "const",
                 "nil"
             ],
         )));
