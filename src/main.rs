@@ -21,10 +21,11 @@ fun a(b):
     return a'(b)
 
 let foo = {
-    bob: 100 == 10 * 10
+    bob: 10 * 10
+    ild: 100
 }
 
-print(a(foo).bob)
+print(a(foo).bob + foo.ild)
     "#;
 
     let source = Source::from("<test.hug>", test.lines().map(|x| x.into()).collect::<Vec<String>>());
