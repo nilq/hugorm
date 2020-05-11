@@ -49,7 +49,7 @@ Compile-time programming:
 const foo = 100 + 100
 
 const fun bar(b):
-  if b == true:
+  if b:
     return "ok hello"
   else:
     return "ok hello but false"
