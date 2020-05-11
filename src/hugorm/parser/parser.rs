@@ -462,8 +462,8 @@ impl<'p> Parser<'p> {
         }
 
         match self.current_type() {
-            TokenType::Symbol => {
-                if self.current_lexeme() == "(" {
+            TokenType::Symbol => match self.current_lexeme().as_str() {
+                "(" => {
                     self.next()?;
                     self.next_newline()?;
 
@@ -488,11 +488,49 @@ impl<'p> Parser<'p> {
 
                     let position = expression.pos.clone();
 
-                    return Ok(Expression::new(
+                    let call = Expression::new(
                         ExpressionNode::Call(Rc::new(expression), args),
                         self.span_from(position),
-                    ));
-                } else {
+                    );
+
+                    self.parse_postfix(call)
+                },
+
+                "[" => {
+                    self.next()?;
+
+                    let expr = self.parse_expression()?;
+
+                    self.eat_lexeme("]")?;
+
+                    let position = expression.pos.clone();
+
+                    let index = Expression::new(
+                        ExpressionNode::Binary(Rc::new(expression), Operator::Index, Rc::new(expr)),
+                        self.span_from(position),
+                    );
+
+                    self.parse_postfix(index)
+                }
+
+                "." => {
+                    self.next()?;
+
+                    let position = self.current_position();
+
+                    let id = Expression::new(ExpressionNode::Identifier(self.eat()?), position);
+
+                    let position = expression.pos.clone();
+
+                    let index = Expression::new(
+                        ExpressionNode::Binary(Rc::new(expression), Operator::Index, Rc::new(id)),
+                        self.span_from(position),
+                    );
+
+                    self.parse_postfix(index)
+                }
+                
+                _ => {
                     Ok(expression)
                 }
             },

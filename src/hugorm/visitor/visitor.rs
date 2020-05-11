@@ -12,7 +12,7 @@ use std::io::prelude::*;
 use std::path::Path;
 use std::mem;
 
-use zub::ir::{ IrBuilder, ExprNode, Binding, IrFunctionBody, IrFunction, Expr, TypeInfo };
+use zub::ir::{ IrBuilder, ExprNode, Binding, IrFunctionBody, IrFunction, Expr, TypeInfo, BinaryOp, Literal };
 
 pub type VarPos = Binding;
 
@@ -265,10 +265,16 @@ impl<'a> Visitor<'a> {
 
                         self.builder.var(Binding::local(n, self.depth, binding.function_depth))
                     } else {
-                        unreachable!()
+                        panic!();
+                        return Err(response!(
+                            Wrong(format!("no such variable `{}`", n)),
+                            self.source.file,
+                            expression.pos
+                        ));
                     }
                 }
             }
+
             Call(ref callee, ref args) => {
                 let mut args_ir = Vec::new();
 
@@ -279,7 +285,73 @@ impl<'a> Visitor<'a> {
                 let callee_ir = self.compile_expression(callee)?;
 
                 self.builder.call(callee_ir, args_ir, None)
-            },
+            }
+
+            Binary(ref left, ref op, ref right) => {
+                let left_ir = self.compile_expression(left)?;
+
+
+                let right_ir = if op == &Index {
+                    if let ExpressionNode::Identifier(ref n) = right.node {
+                        Expr::Literal(
+                            Literal::String(n.clone())
+                        ).node(TypeInfo::nil())
+
+                    } else {
+                        unreachable!()
+                    }
+                } else {
+                    self.compile_expression(right)?
+                };
+
+                use self::Operator::*;
+
+                let op_ir = match op {
+                    Add   => BinaryOp::Add,
+                    Sub   => BinaryOp::Sub,
+                    Mul   => BinaryOp::Mul,
+                    Div   => BinaryOp::Div,
+                    Mod   => BinaryOp::Rem,
+                    And   => BinaryOp::And,
+                    Or    => BinaryOp::Or,
+                    Eq    => BinaryOp::Equal,
+                    NEq   => BinaryOp::NEqual,
+                    Lt    => BinaryOp::Lt,
+                    LtEq  => BinaryOp::LtEqual,
+                    Gt    => BinaryOp::Gt,
+                    GtEq  => BinaryOp::GtEqual,
+                    Index => BinaryOp::Index,
+                    _ => todo!()
+                };
+
+                self.builder.binary(left_ir, op_ir, right_ir)
+            }
+
+            Array(ref content) => {
+                let mut cont_ir = Vec::new();
+
+                for element in content.iter() {
+                    cont_ir.push(self.compile_expression(element)?)
+                }
+
+                self.builder.list(cont_ir)
+            }
+
+            Dict(ref content) => {
+                let mut keys = Vec::new();
+                let mut vals = Vec::new();
+
+                for (key, val) in content.iter() {
+                    keys.push(
+                        Expr::Literal(
+                            Literal::String(key.clone())
+                        ).node(TypeInfo::nil())
+                    );
+                    vals.push(self.compile_expression(val)?);
+                }
+
+                self.builder.dict(keys, vals)
+            }
 
             ref c => todo!("{:#?}", c),
         };
@@ -343,6 +415,11 @@ impl<'a> Visitor<'a> {
             Float(_) => Type::from(TypeNode::Float),
             Binary(ref left, ref op, ref right) => {
                 use self::Operator::*;
+
+                if op == &Index {
+                    // TODO
+                    return Ok(Type::from(TypeNode::Any))
+                }
 
                 match (
                     self.type_expression(left)?.node,

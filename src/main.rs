@@ -15,12 +15,16 @@ use colored::Colorize;
 fn main() {
     let test = r#"
 fun a(b):
-    fun a(c):
+    fun a'(c):
         return c
 
-    return a(b)
+    return a'(b)
 
-print(a("hey hey"))
+let foo = {
+    bob: 100 == 10 * 10
+}
+
+print(a(foo).bob)
     "#;
 
     let source = Source::from("<test.hug>", test.lines().map(|x| x.into()).collect::<Vec<String>>());
@@ -40,8 +44,8 @@ print(a("hey hey"))
 
     match parser.parse() {
         Ok(ast) => {
-            // println!("{:#?}", ast);
-            // println!("\n--------------\n");
+            println!("{:#?}", ast);
+            println!("\n--------------\n");
 
             let mut visitor = Visitor::new(&source, &ast);
 
