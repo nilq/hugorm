@@ -69,36 +69,36 @@ pub enum Inside {
 
 pub struct Visitor<'a> {
     pub source: &'a Source,
-    pub ast: &'a Vec<Statement>,
     pub function_depth: usize,
     pub depth: usize,
     pub inside: Vec<Inside>,
     pub symtab: SymTab,
     pub builder: IrBuilder,
+    pub repl: bool,
 }
 
 impl<'a> Visitor<'a> {
-    pub fn new(source: &'a Source, ast: &'a Vec<Statement>) -> Self {
+    pub fn new(source: &'a Source) -> Self {
         Visitor {
             source,
-            ast,
             symtab: SymTab::new(),
             inside: Vec::new(),
             depth: 0,
             function_depth: 0,
             builder: IrBuilder::new(),
+            repl: false,
         }
     }
 
-    pub fn from(source: &'a Source, ast: &'a Vec<Statement>, symtab: SymTab) -> Self {
+    pub fn from(source: &'a Source, symtab: SymTab) -> Self {
         Visitor {
             source,
-            ast,
             symtab,
             inside: Vec::new(),
             depth: 0,
             function_depth: 0,
             builder: IrBuilder::new(),
+            repl: false
         }
     }
 
@@ -106,14 +106,14 @@ impl<'a> Visitor<'a> {
         self.assign(name.to_string(), Type::from(t))
     }
 
-    pub fn visit(&mut self) -> Result<(), ()> {
-        self.symtab.push(); // can't push_scope, cause it increases depth - that's wack, def don't want that
+    pub fn visit(&mut self, ast: &Vec<Statement>) -> Result<(), ()> {
+        self.symtab.push();
 
-        for statement in self.ast.iter() {
+        for statement in ast.iter() {
             self.visit_statement(&statement)?
         }
 
-        self.symtab.pop(); // cleaning up. don't pop_scope
+        self.symtab.pop();
 
         Ok(())
     }
@@ -164,9 +164,7 @@ impl<'a> Visitor<'a> {
             Function(ref name, ref params, ref body) => {
                 let mut t = Type::from(TypeNode::Func(params.len()));
 
-                println!("set func {} @ {} {}", name, self.depth, self.function_depth);
-
-                let binding = Binding::local(name, self.depth, self.function_depth);
+                let mut binding = Binding::local(name, self.depth, self.function_depth);
 
                 t.set_offset(binding.clone());
 
@@ -182,6 +180,7 @@ impl<'a> Visitor<'a> {
                 for param in params.iter() {
                     let mut t = Type::from(TypeNode::Any);
                     t.set_offset(Binding::local(param.as_str(), self.depth, self.function_depth));
+
                     self.assign(param.clone(), t)
                 }
 
@@ -257,15 +256,16 @@ impl<'a> Visitor<'a> {
             Bool(ref b) => self.builder.bool(*b),
 
             Identifier(ref n) =>  {
-                if n == "print" {
+                if ["print", "dis"].contains(&n.as_str()) {
                     self.builder.var(Binding::global("print"))
                 } else {
                     if let Some(binding) = self.symtab.fetch(n) {
-                        let binding = binding.meta.unwrap();
+                        let mut binding = binding.meta.unwrap();
 
-                        self.builder.var(Binding::local(n, self.depth, binding.function_depth))
+                        binding = Binding::local(n, self.depth, binding.function_depth);
+
+                        self.builder.var(binding)
                     } else {
-                        panic!();
                         return Err(response!(
                             Wrong(format!("no such variable `{}`", n)),
                             self.source.file,
@@ -605,7 +605,6 @@ impl<'a> Visitor<'a> {
 
                 let mut t = self.type_expression(right.as_ref().unwrap())?;
 
-                println!("set {} @ depth({:?}) funcs({})", name, binding.depth, binding.function_depth);
                 t.set_offset(binding.clone());
 
                 self.assign(name.to_owned(), t);
