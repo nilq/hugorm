@@ -143,6 +143,7 @@ impl SymTab {
             if let Some(t) = self.cached_frames[offset].get(name) {
                 return Some(t);
             } else {
+
                 if offset == 0 {
                     return None;
                 }

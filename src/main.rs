@@ -7,7 +7,6 @@ use hugorm::lexer::*;
 use hugorm::source::*;
 use hugorm::parser::*;
 use hugorm::visitor::*;
-use hugorm::ir::*;
 
 use zub::vm::*;
 
@@ -15,16 +14,13 @@ use colored::Colorize;
 
 fn main() {
     let test = r#"
-fun print(a): return
+fun a(b):
+    fun a(c):
+        return c
 
-fun foo(a):
-    let b = a
+    return a(b)
 
-    print(b)
-
-    return b
-
-let bar = foo(10.0)
+print(a("hey hey"))
     "#;
 
     let source = Source::from("<test.hug>", test.lines().map(|x| x.into()).collect::<Vec<String>>());
@@ -44,19 +40,19 @@ let bar = foo(10.0)
 
     match parser.parse() {
         Ok(ast) => {
-            println!("{:#?}", ast);
-            println!("\n--------------\n");
+            // println!("{:#?}", ast);
+            // println!("\n--------------\n");
 
             let mut visitor = Visitor::new(&source, &ast);
+
+            visitor.set_global("print", TypeNode::Func(1));
 
             match visitor.visit() {
                 Ok(_) => {
                     println!("{}", "We're good".green());
 
-                    let mut compiler = Compiler::new(&mut visitor);
+                    visitor.symtab.pop(); // gotta cachce root scope
 
-                    compiler.compile(ast.clone()).unwrap();
-                    
                     fn print(heap: &Heap<Object>, args: &[Value]) -> Value {
                         println!("{}", args[1].with_heap(heap));
                         Value::nil()
@@ -65,7 +61,9 @@ let bar = foo(10.0)
                     let mut vm = VM::new();
                     vm.add_native("print", print, 1);
 
-                    let ir = compiler.build();
+                    let ir = visitor.build();
+
+                    println!("{:#?}", ir);
 
                     vm.exec(&ir, true);
                 },

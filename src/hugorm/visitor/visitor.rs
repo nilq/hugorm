@@ -3,6 +3,7 @@ use std::fmt::{self, Display, Formatter, Write};
 use std::rc::Rc;
 
 use super::super::error::Response::*;
+use std::cell::RefCell;
 
 use super::*;
 
@@ -11,7 +12,9 @@ use std::io::prelude::*;
 use std::path::Path;
 use std::mem;
 
-pub type VarPos = (usize, usize);
+use zub::ir::{ IrBuilder, ExprNode, Binding, IrFunctionBody, IrFunction, Expr, TypeInfo };
+
+pub type VarPos = Binding;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum TypeNode {
@@ -71,6 +74,7 @@ pub struct Visitor<'a> {
     pub depth: usize,
     pub inside: Vec<Inside>,
     pub symtab: SymTab,
+    pub builder: IrBuilder,
 }
 
 impl<'a> Visitor<'a> {
@@ -82,6 +86,7 @@ impl<'a> Visitor<'a> {
             inside: Vec::new(),
             depth: 0,
             function_depth: 0,
+            builder: IrBuilder::new(),
         }
     }
 
@@ -93,7 +98,12 @@ impl<'a> Visitor<'a> {
             inside: Vec::new(),
             depth: 0,
             function_depth: 0,
+            builder: IrBuilder::new(),
         }
+    }
+
+    pub fn set_global(&mut self, name: &str, t: TypeNode) {
+        self.assign(name.to_string(), Type::from(t))
     }
 
     pub fn visit(&mut self) -> Result<(), ()> {
@@ -108,23 +118,40 @@ impl<'a> Visitor<'a> {
         Ok(())
     }
 
+    pub fn build(&self) -> Vec<ExprNode> {
+        self.builder.build()
+    }
+
     pub fn visit_statement(&mut self, statement: &Statement) -> Result<(), ()> {
         use self::StatementNode::*;
 
         let position = statement.pos.clone();
 
         match statement.node {
-            Expression(ref expr) => self.visit_expression(expr),
+            Expression(ref expr) => {
+                self.visit_expression(expr)?;
+
+                let ir = self.compile_expression(expr)?;
+                self.builder.emit(ir);
+
+                Ok(())
+            }
             Declaration(..) => self.visit_variable(&statement.node, &statement.pos),
             Assignment(..) => self.visit_ass(&statement.node, &statement.pos),
 
             Return(ref value) => {
                 if self.inside.contains(&Inside::Function) {
-                    if let Some(ref expression) = *value {
-                        self.visit_expression(expression)
+                    let ret = if let Some(ref expression) = *value {
+                        self.visit_expression(expression)?;
+
+                        Some(self.compile_expression(expression)?)
                     } else {
-                        Ok(())
-                    }
+                        None
+                    };
+
+                    self.builder.ret(ret);
+
+                    Ok(())
                 } else {
                     return Err(response!(
                         Wrong("can't return outside of function"),
@@ -139,9 +166,14 @@ impl<'a> Visitor<'a> {
 
                 println!("set func {} @ {} {}", name, self.depth, self.function_depth);
 
-                t.set_offset((self.depth, self.function_depth));
+                let binding = Binding::local(name, self.depth, self.function_depth);
+
+                t.set_offset(binding.clone());
+
                 self.assign(name.to_owned(), t);
 
+                let old_current = self.builder.clone();
+                self.builder = IrBuilder::new();
 
                 self.function_depth += 1;
                 self.push_scope();
@@ -149,19 +181,39 @@ impl<'a> Visitor<'a> {
 
                 for param in params.iter() {
                     let mut t = Type::from(TypeNode::Any);
-                    t.set_offset((self.depth, self.function_depth));
-
+                    t.set_offset(Binding::local(param.as_str(), self.depth, self.function_depth));
                     self.assign(param.clone(), t)
                 }
 
                 for statement in body.iter() {
-                    self.visit_statement(statement)?
+                    self.visit_statement(statement)?;
                 }
+
 
                 self.inside.pop();
                 self.pop_scope();
                 self.function_depth -= 1;
 
+                self.builder.ret(None);
+
+                let body = self.builder.build();
+
+                self.builder = old_current;
+
+                let func_body = IrFunctionBody {
+                    params: params.iter().cloned().map(|x|
+                        Binding::local(x.as_str(), binding.depth.unwrap_or(0) + 1, binding.function_depth + 1)).collect::<Vec<Binding>>(),
+                    method: false,
+                    inner: body
+                };
+
+                let ir_func = IrFunction {
+                    var: binding,
+                    body: Rc::new(RefCell::new(func_body))
+                };
+
+                self.builder.emit(Expr::Function(ir_func).node(TypeInfo::nil()));
+                
                 Ok(())
             },
 
@@ -193,6 +245,46 @@ impl<'a> Visitor<'a> {
                 ))
             }
         }
+    }
+
+    fn compile_expression(&mut self, expression: &Expression) -> Result<ExprNode, ()> {
+        use self::ExpressionNode::*;
+
+        let result = match expression.node {
+            Float(ref n) => self.builder.number(*n),
+            Int(ref n) => self.builder.number(*n as f64),
+            Str(ref s) => self.builder.string(s),
+            Bool(ref b) => self.builder.bool(*b),
+
+            Identifier(ref n) =>  {
+                if n == "print" {
+                    self.builder.var(Binding::global("print"))
+                } else {
+                    if let Some(binding) = self.symtab.fetch(n) {
+                        let binding = binding.meta.unwrap();
+
+                        self.builder.var(Binding::local(n, self.depth, binding.function_depth))
+                    } else {
+                        unreachable!()
+                    }
+                }
+            }
+            Call(ref callee, ref args) => {
+                let mut args_ir = Vec::new();
+
+                for arg in args.iter() {
+                    args_ir.push(self.compile_expression(arg)?)
+                }
+
+                let callee_ir = self.compile_expression(callee)?;
+
+                self.builder.call(callee_ir, args_ir, None)
+            },
+
+            ref c => todo!("{:#?}", c),
+        };
+
+        Ok(result)
     }
 
     pub fn visit_expression(&mut self, expression: &Expression) -> Result<(), ()> {
@@ -417,20 +509,33 @@ impl<'a> Visitor<'a> {
             }
 
             if right.is_none() {
-                self.assign(name.to_owned(), Type::from(TypeNode::Nil))
+                let mut t = Type::from(TypeNode::Nil);
+
+                t.set_offset(Binding::local(name.as_str(), self.depth, self.function_depth));
+                
+                self.assign(name.to_owned(), t);
+                let right_ir = self.builder.number(0.0);
+                let binding = Binding::local(name, self.depth, self.function_depth);
+
+                self.builder.bind(binding, right_ir);
+
             } else {
-                let (depth, function_depth) = if let Some(ref t) = self.symtab.fetch(name) {
-                    t.meta.unwrap()
+                let binding = if let Some(ref t) = self.symtab.fetch(name) {
+                    t.meta.clone().unwrap()
                 } else {
-                    (self.depth, self.function_depth)
+                    Binding::local(name.as_str(), self.depth, self.function_depth)
                 };
 
                 let mut t = self.type_expression(right.as_ref().unwrap())?;
 
-                println!("set {} @ depth({}) funcs({})", name, depth, function_depth);
-                t.set_offset((depth, function_depth));
+                println!("set {} @ depth({:?}) funcs({})", name, binding.depth, binding.function_depth);
+                t.set_offset(binding.clone());
 
                 self.assign(name.to_owned(), t);
+
+                let right_ir = self.compile_expression(&right.clone().unwrap())?;
+
+                self.builder.bind(binding, right_ir);
             }
         }
 
@@ -444,13 +549,12 @@ impl<'a> Visitor<'a> {
             if let ExpressionNode::Identifier(ref name) = name.node {
 
                 if let Some(left_t) = self.symtab.fetch(name) {
-                    let (offset, depth) = left_t.meta.unwrap().clone();
+                    let binding = left_t.meta.unwrap().clone();
     
                     let mut t = self.type_expression(&right)?;
-                    t.set_offset((offset, depth));
+                    t.set_offset(binding);
     
-    
-                    self.assign(name.to_owned(), t);
+                    self.assign(name.to_owned(), t)
                 } else {
                     return Err(response!(
                         Wrong(format!("can't assign non-existent `{}`", name)),
@@ -459,6 +563,13 @@ impl<'a> Visitor<'a> {
                     ))
                 }
             }
+
+            self.visit_expression(right)?;
+
+            let left_ir = self.compile_expression(name)?;
+            let right_ir = self.compile_expression(right)?;
+
+            self.builder.mutate(left_ir, right_ir)
         }
 
         Ok(())
