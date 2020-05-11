@@ -70,7 +70,7 @@ print(a(foo).bob + foo.ild)
 
                     println!("{:#?}", ir);
 
-                    vm.exec(&ir, true);
+                    vm.exec(&ir, false);
                 },
                 _ => (),
             }
