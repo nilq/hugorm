@@ -14,14 +14,21 @@ Hugorm is a dynamic scripting language designed for mission-critical development
 
 ### Showcase
 
-Currently the language is in the early stages, so here's a generic example:
+Currently the language is in the early stages, so here's a generic, useless example:
 
 ```fs
-fun foo(x):
-  return x^3 + 2 * x^2 - 10
+fun a(b):
+    fun a'(c):
+        return c
 
-fun foo'(x):
-  return 3 * x^2 + 4 * x
+    return a'(b)
+
+let foo = {
+    bob: 10 * 10
+    ild: 100
+}
+
+print(a(foo).bob + foo.ild)
 ```
 
 And a more exotic example:
