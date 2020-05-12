@@ -16,6 +16,8 @@ use zub::vm::*;
 use zub::compiler::*;
 use zub::ir::*;
 
+use std::rc::Rc;
+
 use colored::Colorize;
 
 use rustyline::error::ReadlineError;
@@ -83,7 +85,10 @@ fun a(b):
 
 fn repl() {
     let mut rl = Editor::<()>::new();
-    println!("{}", "Hugorm REPL | Interactive gangster terminal");
+    let header = format!("{} | {}", "Hugorm REPL".bold(), "Interactive gangster terminal".yellow().bold());
+    println!("{}", header);
+    println!("{}", "-------------------------------------------".green());
+
 
     let source = Source::from("<repl>", Vec::new());
 
@@ -102,10 +107,14 @@ fn repl() {
     let mut last_len = 0usize;
 
     loop {
-        let readline = rl.readline(">> ");
+        let readline = rl.readline(&format!("{}", ">> ".green()));
 
         match readline {
             Ok(line) => {
+                if line.len() == 0 {
+                    continue
+                }
+
                 rl.add_history_entry(line.as_str());
                 
                 let source = Source::from("<repl>", line.lines().map(|x| x.into()).collect::<Vec<String>>());
@@ -124,8 +133,45 @@ fn repl() {
                 let mut parser = Parser::new(tokens, &source);
 
                 match parser.parse() {
-                    Ok(new_ast) => {
-                        match visitor.visit(&new_ast) {
+                    Ok(ast) => {
+                        let mut repl_ast = Vec::new();
+
+                        if ast.len() == 1 {
+                            if let StatementNode::Expression(ref expr) = ast[0].node {
+                                let pos = ast[0].pos.clone();
+
+                                repl_ast.push(
+                                    Statement::new(
+                                        StatementNode::Declaration(
+                                            "$".to_string(), // to capture print return no fucks
+                                            Some(
+                                                Expression::new(
+                                                    ExpressionNode::Call(
+                                                        Rc::new(
+                                                            Expression::new(
+                                                                ExpressionNode::Identifier(
+                                                                    String::from("print")
+                                                                ),
+                                                                pos.clone()
+                                                            )
+                                                        ),
+                                                        vec!(expr.clone())
+                                                    ),
+                                                    pos.clone()
+                                                )
+                                            )
+                                        ),
+                                        pos.clone()
+                                    )
+                                )
+                            } else {
+                                repl_ast = ast
+                            }
+                        } else {
+                            repl_ast = ast
+                        }
+
+                        match visitor.visit(&repl_ast) {
                             Ok(_) => {
                                 let mut buffer = BufferRedirect::stdout().unwrap();
 

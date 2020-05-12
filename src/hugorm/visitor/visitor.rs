@@ -321,6 +321,7 @@ impl<'a> Visitor<'a> {
                     Gt    => BinaryOp::Gt,
                     GtEq  => BinaryOp::GtEqual,
                     Index => BinaryOp::Index,
+                    Pow   => BinaryOp::Pow, 
                     _ => todo!()
                 };
 
