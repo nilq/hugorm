@@ -1,4 +1,6 @@
-fun main():
-    return 10
+fun main(a):
+    return a
 
-main(a)
+let b = main(10)
+
+print(b)

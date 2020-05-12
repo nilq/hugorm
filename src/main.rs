@@ -23,18 +23,14 @@ use colored::Colorize;
 use rustyline::error::ReadlineError;
 use rustyline::Editor;
 
-fn test() {
-    let test = r#"
-fun a(b):
-    fun ø'(c):
-        return c
+use std::io::prelude::*;
+use std::path::Path;
+use std::fs::File;
+use std::fs::metadata;
 
-    return ø'(b)
-
-    "#;
-
-    let source = Source::from("<test.hug>", test.lines().map(|x| x.into()).collect::<Vec<String>>());
-    let lexer = Lexer::default(test.chars().collect(), &source);
+fn run(path: &str, content: &str) {
+    let source = Source::from(path, content.lines().map(|x| x.into()).collect::<Vec<String>>());
+    let lexer = Lexer::default(content.chars().collect(), &source);
 
     let mut tokens = Vec::new();
 
@@ -50,17 +46,12 @@ fun a(b):
 
     match parser.parse() {
         Ok(ast) => {
-            println!("{:#?}", ast);
-            println!("\n--------------\n");
-
             let mut visitor = Visitor::new(&source);
 
             visitor.set_global("print", TypeNode::Func(1));
 
             match visitor.visit(&ast) {
                 Ok(_) => {
-                    println!("{}", "We're good".green());
-
                     visitor.symtab.pop(); // gotta cachce root scope
 
                     fn print(heap: &Heap<Object>, args: &[Value]) -> Value {
@@ -198,12 +189,12 @@ fn repl() {
             },
 
             Err(ReadlineError::Interrupted) => {
-                println!("CTRL-C");
+                println!("Bye.");
                 break
             },
 
             Err(ReadlineError::Eof) => {
-                println!("CTRL-D");
+                println!("Au revoir.");
                 break
             },
 
@@ -215,6 +206,30 @@ fn repl() {
     }
 }
 
+fn run_file(path: &str, root: &String) {
+    let display = Path::new(path).display();
+
+    let mut file = match File::open(&path) {
+        Err(why) => panic!("failed to open {}: {}", display, why),
+        Ok(file) => file,
+    };
+
+    let mut s = String::new();
+
+    match file.read_to_string(&mut s) {
+        Err(why) => panic!("failed to read {}: {}", display, why),
+        Ok(_) => run(&path, &s),
+    }
+}
+
 fn main() {
-    repl()
+    let args = std::env::args().collect::<Vec<String>>();
+
+    if args.len() == 1 {
+        repl()
+    } else {
+        for arg in args[1..].iter() {
+            run_file(arg, arg)
+        }
+    }
 }
