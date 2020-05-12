@@ -236,9 +236,13 @@ impl<'a> Visitor<'a> {
                     self.push_scope();
                     self.depth -= 1; // brother bruh
 
+                    self.inside.push(Inside::Loop);
+
                     for statement in body.iter() {
                         self.visit_statement(statement)?;
                     }
+
+                    self.inside.pop();
 
                     self.depth += 1; // hehe
                     self.pop_scope();
@@ -329,6 +333,20 @@ impl<'a> Visitor<'a> {
                 } else {
                     return Err(response!(
                         Wrong("can't have non-boolean condition"),
+                        self.source.file,
+                        position
+                    ))
+                }
+            }
+
+            Break => {
+                if self.inside.contains(&Inside::Loop) {
+                    self.builder.break_();
+
+                    Ok(())
+                } else {
+                    return Err(response!(
+                        Wrong("you need a loop to break out of here"),
                         self.source.file,
                         position
                     ))
@@ -487,11 +505,13 @@ impl<'a> Visitor<'a> {
                         ))
                     }
                 } else {
-                    return Err(response!(
-                        Wrong(format!("trying to call non-function: `{:?}`", caller_t)),
-                        self.source.file,
-                        caller.pos
-                    ))
+                    if caller_t != TypeNode::Any {
+                        return Err(response!(
+                            Wrong(format!("trying to call non-function: `{:?}`", caller_t)),
+                            self.source.file,
+                            caller.pos
+                        ))
+                    }
                 }
 
                 Ok(())

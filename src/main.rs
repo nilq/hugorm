@@ -69,9 +69,7 @@ fn run(path: &str, content: &str) {
 
                     let ir = visitor.build();
 
-                    println!("{:#?}", ir);
-
-                    vm.exec(&ir, true);
+                    vm.exec(&ir, false);
                 },
                 _ => (),
             }
@@ -247,8 +245,6 @@ fn repl() {
                                 let mut buffer = BufferRedirect::stdout().unwrap();
 
                                 let ir = visitor.build();
-
-                                println!("{:#?}", ir);
 
                                 vm.exec(&ir, false);
 

@@ -227,6 +227,15 @@ impl<'p> Parser<'p> {
                     )
                 }
 
+                "break" => {
+                    self.next()?;
+
+                    Statement::new(
+                        StatementNode::Break,
+                        position
+                    )
+                }
+
                 "if" => {
                     self.next()?;
 

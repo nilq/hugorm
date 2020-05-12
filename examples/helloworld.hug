@@ -1,12 +1,11 @@
-fun main():
-    if false:
-        return "it was true"
-    elif 1 + 2 == 4:
-        return "not this please"
-    else:
-        return "ahh yea the right one"
+fun foo():
+    while true:
+        let bar = "hey"
 
-while true:
-    print(main())
+        fun g():
+            print(bar)
+        
+        return g
 
-print("did it work though")
+let h = foo()
+h()
