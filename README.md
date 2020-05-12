@@ -1,4 +1,4 @@
-<div align="center">
+<div align="right">
   <img width="30%" height="30%" src="https://i.ibb.co/gStcJrc/hugorm.png" alt="hugorm" border="0"/>
 </div>
 <h1 align="center">Hugorm</h1>
