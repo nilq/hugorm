@@ -1,6 +1,10 @@
-fun main(a):
-    return a
+fun main():
+    if false:
+        return "it was true"
+    elif 1 + 2 == 4:
+        return "not this please"
+    else:
+        return "ahh yea the right one"
 
-let b = main(10)
-
-print(b)
+print(main())
+print("did it work though")

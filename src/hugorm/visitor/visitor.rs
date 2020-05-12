@@ -224,6 +224,77 @@ impl<'a> Visitor<'a> {
                 Ok(())
             }
 
+            If(ref cond, ref body, ref else_) => {
+                self.visit_expression(cond)?;
+
+                if TypeNode::Bool == self.type_expression(cond)?.node {
+                    let cond = self.compile_expression(cond)?;
+
+                    let old_current = self.builder.clone();
+                    self.builder = IrBuilder::new();
+
+                    self.push_scope();
+
+                    for statement in body.iter() {
+                        self.visit_statement(statement)?;
+                    }
+
+                    self.pop_scope();
+
+                    let body = Expr::Block(self.builder.build()).node(TypeInfo::nil());
+
+                    self.builder = old_current;
+
+                    let mut else_blocks = Expr::Literal(Literal::Nil);
+
+                    for (i, els) in else_.iter().enumerate() {
+                        let old_current = self.builder.clone();
+                        self.builder = IrBuilder::new();
+
+                        self.push_scope();
+
+                        if let Some(ref cond) = els.0 {
+                            let pos = cond.pos.clone();
+
+                            let elif = Statement::new(
+                                StatementNode::If(cond.clone(), els.1.clone(), else_[i + 1 ..].to_vec()),
+                                pos
+                            );
+
+                            self.visit_statement(&elif)?;
+
+                            self.pop_scope();
+
+                            break // 9000 IQ
+
+                        } else {
+                            for statement in els.1.iter() {
+                                self.visit_statement(statement)?;
+                            }
+                        }
+
+                        self.pop_scope();
+
+                        let body = self.builder.build();
+
+                        self.builder = old_current;
+
+                        else_blocks = Expr::Block(body);
+                    }
+
+                    self.builder.emit(Expr::If(cond, body, Some(else_blocks.node(TypeInfo::nil()))).node(TypeInfo::nil() ));
+
+                    Ok(())
+
+                } else {
+                    return Err(response!(
+                        Wrong("can't have non-boolean condition"),
+                        self.source.file,
+                        position
+                    ))
+                }
+            }
+
             Const(..) => return Err(response!(
                 Wrong("constants are not implemented yet"),
                 self.source.file,

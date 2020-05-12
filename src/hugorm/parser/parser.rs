@@ -203,6 +203,77 @@ impl<'p> Parser<'p> {
                     )
                 },
 
+                "if" => {
+                    self.next()?;
+
+                    let cond = self.parse_expression()?;
+
+                    self.eat_lexeme(":")?;
+
+                    let pos = self.span_from(position);
+
+                    let mut no_else = false;
+
+                    let body = if self.current_lexeme() == "\n" {
+                        self.next()?;
+                        self.parse_body()?
+                    } else {
+                        no_else = true;
+                        vec!(self.parse_statement()?)
+                    };
+                    
+                    if no_else {
+                        return Ok(
+                            Statement::new(
+                                StatementNode::If(cond, body, Vec::new()),
+                                pos
+                            )
+                        )
+                    } else {
+                        let mut else_ = Vec::new();
+
+                        let mut cur = self.current_lexeme();
+
+                        while ["elif", "else"].contains(&cur.as_str()) {
+                            self.next()?;
+                            
+                            if cur == "else" {
+                                self.eat_lexeme(":")?;
+
+                                let body = if self.current_lexeme() == "\n" {
+                                    self.next()?;
+                                    self.parse_body()?
+                                } else {
+                                    vec!(self.parse_statement()?)
+                                };
+
+                                else_.push((None, body))
+                            } else if cur == "elif" {
+                                let cond = self.parse_expression()?;
+                                self.eat_lexeme(":")?;
+
+                                let body = if self.current_lexeme() == "\n" {
+                                    self.next()?;
+                                    self.parse_body()?
+                                } else {
+                                    vec!(self.parse_statement()?)
+                                };
+
+                                else_.push((Some(cond), body))
+                            }
+
+                            cur = self.current_lexeme()
+                        }
+
+                        return Ok(
+                            Statement::new(
+                                StatementNode::If(cond, body, else_),
+                                pos
+                            )
+                        )
+                    }
+                }
+
                 _ => {
                     let expression = self.parse_expression()?;
                     let position = expression.pos.clone();
@@ -626,14 +697,16 @@ impl<'p> Parser<'p> {
         if self.remaining() > 0 {
             match self.current_lexeme().as_str() {
                 "\n" => self.next(),
-                _ => Err(response!(
-                    Wrong(format!(
-                        "expected new line found: `{}`",
-                        self.current_lexeme()
-                    )),
-                    self.source.file,
-                    self.current_position()
-                )),
+                _ => {
+                    Err(response!(
+                        Wrong(format!(
+                            "expected new line found: `{}`",
+                            self.current_lexeme()
+                        )),
+                        self.source.file,
+                        self.current_position()
+                    ))
+                },
             }
         } else {
             Ok(())

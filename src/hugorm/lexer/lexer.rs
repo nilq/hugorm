@@ -39,7 +39,10 @@ impl<'l> Lexer<'l> {
                 "interface",
                 "with",
                 "const",
-                "nil"
+                "nil",
+                "else",
+                "elif",
+                "if",
             ],
         )));
 

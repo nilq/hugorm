@@ -64,7 +64,7 @@ fn run(path: &str, content: &str) {
 
                     let ir = visitor.build();
 
-                    vm.exec(&ir, false);
+                    vm.exec(&ir, true);
                 },
                 _ => (),
             }
@@ -97,13 +97,43 @@ fn repl() {
 
     let mut last_len = 0usize;
 
+    let caret_normal = format!("{}", ">> ".green());
+    let caret_buffer = ".. ".to_string();
+    let mut caret = caret_normal.clone();
+
+    let mut in_buffer = false;
+
+    let mut line_buffer = String::new(); // for multiline stuff
+
     loop {
-        let readline = rl.readline(&format!("{}", ">> ".green()));
+        let readline = rl.readline(caret.as_str());
 
         match readline {
             Ok(line) => {
                 if line.len() == 0 {
+                    if in_buffer {
+                        in_buffer = false;
+
+                        caret = caret_normal.clone();
+                    } else {
+                        continue
+                    }
+                }
+
+                let mut line = line;
+
+                if line.len() > 0 && line.trim().chars().last().unwrap() == ':' || in_buffer {
+                    line_buffer.push_str(&line);
+                    line_buffer.push('\n');
+
+                    caret = caret_buffer.clone();
+
+                    in_buffer = true;
+
                     continue
+                } else if line_buffer.len() > 0 {
+                    line = format!("{}\n{}", line_buffer, line);
+                    line_buffer = String::new()
                 }
 
                 rl.add_history_entry(line.as_str());
