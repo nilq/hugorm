@@ -16,7 +16,7 @@ It is a dynamically typed programming language. Hugorm strives to be *better* ve
 - [x] Made in Rust
 - [x] The REPL has colors
 - [ ] ~~Absolutely massive community~~
-- [x] Surprising bugs
+- [x] Surprising bugs, maybe
 
 
 ## Examples
