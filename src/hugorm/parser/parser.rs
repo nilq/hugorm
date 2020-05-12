@@ -203,6 +203,30 @@ impl<'p> Parser<'p> {
                     )
                 },
 
+                "while" => {
+                    self.next()?;
+
+                    let cond = self.parse_expression()?;
+
+                    self.eat_lexeme(":")?;
+
+                    let pos = self.span_from(position);
+
+                    let body = if self.current_lexeme() == "\n" {
+                        self.next()?;
+                        self.parse_body()?
+                    } else {
+                        vec!(self.parse_statement()?)
+                    };
+
+                    return Ok(
+                        Statement::new(
+                            StatementNode::While(cond, body),
+                            pos
+                        )
+                    )
+                }
+
                 "if" => {
                     self.next()?;
 
@@ -303,7 +327,7 @@ impl<'p> Parser<'p> {
             }
         };
 
-        self.new_line();
+        self.new_line()?;
 
         Ok(statement)
     }

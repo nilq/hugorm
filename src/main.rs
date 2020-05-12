@@ -1,5 +1,6 @@
 extern crate colored;
 extern crate rustyline;
+extern crate rustyline_derive;
 extern crate zub;
 extern crate gag;
 
@@ -20,8 +21,12 @@ use std::rc::Rc;
 
 use colored::Colorize;
 
+use std::collections::HashSet;
+
 use rustyline::error::ReadlineError;
 use rustyline::Editor;
+use rustyline::{hint::Hinter, Context};
+use rustyline_derive::{Completer, Helper, Highlighter, Validator};
 
 use std::io::prelude::*;
 use std::path::Path;
@@ -64,6 +69,8 @@ fn run(path: &str, content: &str) {
 
                     let ir = visitor.build();
 
+                    println!("{:#?}", ir);
+
                     vm.exec(&ir, true);
                 },
                 _ => (),
@@ -74,9 +81,52 @@ fn run(path: &str, content: &str) {
     }
 }
 
+#[derive(Completer, Helper, Validator, Highlighter)]
+struct HugHinter {
+    hints: HashSet<String>
+}
+
+impl Hinter for HugHinter {
+    fn hint(&self, line: &str, pos: usize, _ctx: &Context<'_>) -> Option<String> {
+        if pos < line.len() {
+            return None;
+        }
+
+        self.hints
+            .iter()
+            .filter_map(|hint| {
+                if pos > 0 && hint.starts_with(&line[..pos]) {
+                    Some(format!("{}", hint[pos..].to_owned()))
+                } else {
+                    None
+                }
+            })
+            .next()
+    }
+}
+
+fn hugorm_hints() -> HashSet<String> {
+    let mut set = HashSet::new();
+
+    set.insert("fun".to_string());
+    set.insert("print".to_string());
+    set.insert("if".to_string());
+    set.insert("elif".to_string());
+    set.insert("else".to_string());
+    set.insert("let".to_string());
+
+    set
+}
+
 fn repl() {
-    let mut rl = Editor::<()>::new();
-    let header = format!("{} | {}", "Hugorm REPL".bold(), "Interactive gangster terminal".yellow().bold());
+    let hinter = HugHinter {
+        hints: hugorm_hints()
+    };
+
+    let mut rl = Editor::<HugHinter>::new();
+    rl.set_helper(Some(hinter));
+
+    let header = format!("{} {} {}", "Hugorm REPL".bold(), "|".green(), "Interactive gangster terminal".yellow().bold());
     println!("{}", header);
     println!("{}", "-------------------------------------------".green());
 
@@ -196,7 +246,11 @@ fn repl() {
                             Ok(_) => {
                                 let mut buffer = BufferRedirect::stdout().unwrap();
 
-                                vm.exec(&visitor.build(), false);
+                                let ir = visitor.build();
+
+                                println!("{:#?}", ir);
+
+                                vm.exec(&ir, false);
 
                                 visitor.symtab.stack.push(visitor.symtab.last.clone());
 

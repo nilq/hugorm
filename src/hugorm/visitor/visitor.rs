@@ -224,6 +224,44 @@ impl<'a> Visitor<'a> {
                 Ok(())
             }
 
+            While(ref cond, ref body) => {
+                self.visit_expression(cond)?;
+
+                if TypeNode::Bool == self.type_expression(cond)?.node {
+                    let cond = self.compile_expression(cond)?;
+
+                    let old_current = self.builder.clone();
+                    self.builder = IrBuilder::new();
+
+                    self.push_scope();
+                    self.depth -= 1; // brother bruh
+
+                    for statement in body.iter() {
+                        self.visit_statement(statement)?;
+                    }
+
+                    self.depth += 1; // hehe
+                    self.pop_scope();
+
+
+                    let body = Expr::Block(self.builder.build()).node(TypeInfo::nil());
+
+                    self.builder = old_current;
+
+                    self.builder.emit(
+                        Expr::While(cond, body).node(TypeInfo::nil())
+                    );
+
+                    Ok(())
+                } else {
+                    return Err(response!(
+                        Wrong("can't have non-boolean condition"),
+                        self.source.file,
+                        position
+                    ))
+                }
+            }
+
             If(ref cond, ref body, ref else_) => {
                 self.visit_expression(cond)?;
 
@@ -234,11 +272,13 @@ impl<'a> Visitor<'a> {
                     self.builder = IrBuilder::new();
 
                     self.push_scope();
+                    self.depth -= 1; // brother bruh
 
                     for statement in body.iter() {
                         self.visit_statement(statement)?;
                     }
 
+                    self.depth += 1; // brother bruh again
                     self.pop_scope();
 
                     let body = Expr::Block(self.builder.build()).node(TypeInfo::nil());

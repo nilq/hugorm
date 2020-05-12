@@ -43,6 +43,7 @@ impl<'l> Lexer<'l> {
                 "else",
                 "elif",
                 "if",
+                "while"
             ],
         )));
 
