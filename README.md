@@ -5,68 +5,84 @@
 
 ## What is Hugorm?
 
-Hugorm is a dynamic scripting language designed for mission-critical development, providing a solid stack choice for cool things like:
+It is a dynamically typed programming language. Hugorm strives to be *better* version of the other snake language, with a heightened focus on \<good things here\>. The syntax is designed to be easy to read and easy to write, and runs on a constantly improving bytecode virtual machine.
 
-- small-scale data science projects
-- game jam projects
-- automatic math assignment tasks
-- ... and everything else
+### Selling points
 
-### Showcase
+> "Sssssss ..." - hugorm
 
-Currently the language is in the early stages, so here's a generic, useless example:
+- [x] Decently fast
+- [x] Easy-to-learn syntax
+- [x] Made in Rust
+- [x] The REPL has colors
+- [ ] ~~Absolutely massive community~~
+
+
+## Examples
+
+Everyone loves examples. Below are some rather useless example programs, showcasing the raw syntax of Hugorm.
+
+### Functions
+> Literally fun.
 
 ```fs
-fun a(b):
-    fun a'(c):
-        return c
+fun say-hello():
+  print("hello")
+  
+  return "we did it"
 
-    return a'(b)
+print(say-hello())
+```
 
-let foo = {
-    bob: 10 * 10
-    ild: 100
+### Loops
+
+```fs
+fun øllebrød(n):
+  let i = 0
+  while i < n:
+    if i == 0:
+      print("hey")
+    else:
+      print("hey again")
+  
+    i = i + 1
+    
+øllebrød(1000)
+```
+
+### Data
+
+The code below will print `200`.
+
+```fs
+let player = {
+  x: 100
+  y: 100
 }
 
-print(a(foo).bob + foo.ild)
+let foo = {
+    x: player.x + 100
+}
+
+player = foo
+
+print(player.x)
 ```
-
-And a more exotic example:
-
-```fs
-interface Move:
-  fun move(self, dx, dy):
-    self.x += dx
-    self.y += dy
-
-let snake = {} with Move
-snake\move(10, 10) // Calling method with `self` being snake
-```
-
-Compile-time programming:
-
-```kotlin
-const foo = 100 + 100
-
-const fun bar(b):
-  if b:
-    return "ok hello"
-  else:
-    return "ok hello but false"
-
-const baz = bar(true)
-```
-
 
 ## The future
 
-- Gradual typing
-- First class things: tensors, graphics stuff
-- More speed
+### Interfaces
 
-## Notes
+An interface will work like a set of pre-made functions that can be bound to new objects. Kinda like the way you implement traits on a struct in Rust.
 
-- The symbol table should store IR bindings rather than `(usize, usize)`
+```fs
+interface Moving:
+  fun move(self, x, y):
+    self.x += x
+    self.y += y
+
+let snake = {} with Moving
+```
 
 ## License
 
