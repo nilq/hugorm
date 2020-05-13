@@ -419,9 +419,8 @@ impl<'a> Visitor<'a> {
             Binary(ref left, ref op, ref right) => {
                 let left_ir = self.compile_expression(left)?;
 
-
                 let right_ir = if op == &Index {
-                    if let ExpressionNode::Identifier(ref n) = right.node {
+                    if let ExpressionNode::Str(ref n) = right.node {
                         Expr::Literal(
                             Literal::String(n.clone())
                         ).node(TypeInfo::nil())
@@ -564,8 +563,8 @@ impl<'a> Visitor<'a> {
                                 // real hack here
                                 if a == b {
                                     match a {
-                                        TypeNode::Float | TypeNode::Int => match b {
-                                            TypeNode::Float | TypeNode::Int => {
+                                        TypeNode::Float | TypeNode::Int | TypeNode::Any => match b {
+                                            TypeNode::Float | TypeNode::Int | TypeNode::Any => {
                                                 Type::from(a.clone())
                                             }
 
@@ -612,8 +611,8 @@ impl<'a> Visitor<'a> {
                         }
 
                         Pow => match a {
-                            TypeNode::Float | TypeNode::Int => match b {
-                                TypeNode::Float | TypeNode::Int => Type::from(a.clone()),
+                            TypeNode::Float | TypeNode::Int | TypeNode::Any => match b {
+                                TypeNode::Float | TypeNode::Int | TypeNode::Any => Type::from(a.clone()),
 
                                 _ => {
                                     return Err(response!(
@@ -637,7 +636,7 @@ impl<'a> Visitor<'a> {
                         },
 
                         And | Or => {
-                            if a == b && *a == TypeNode::Bool {
+                            if a == b && *a == TypeNode::Bool || *a == TypeNode::Any {
                                 Type::from(TypeNode::Bool)
                             } else {
                                 return Err(response!(
@@ -649,7 +648,7 @@ impl<'a> Visitor<'a> {
                         }
 
                         Concat => {
-                            if *a == TypeNode::Str {
+                            if [TypeNode::Str, TypeNode::Any].contains(a)  {
                                 match *b {
                                     _ => Type::from(TypeNode::Str),
                                 }
@@ -663,7 +662,8 @@ impl<'a> Visitor<'a> {
                         }
 
                         Eq | Lt | Gt | NEq | LtEq | GtEq => {
-                            if a == b {
+                            let ts = [TypeNode::Any, TypeNode::Float, TypeNode::Int];
+                            if ts.contains(a) && ts.contains(b) {
                                 Type::from(TypeNode::Bool)
                             } else {
                                 return Err(response!(
@@ -753,23 +753,35 @@ impl<'a> Visitor<'a> {
     fn visit_ass(&mut self, ass: &StatementNode, pos: &Pos) -> Result<(), ()> {
         use self::ExpressionNode::*;
 
-        if let &StatementNode::Assignment(ref name, ref right) = ass {            
-            if let ExpressionNode::Identifier(ref name) = name.node {
+        if let &StatementNode::Assignment(ref name, ref right) = ass {  
+            match name.node {          
+                Identifier(ref name) => if let Some(left_t) = self.symtab.fetch(name) {
+                        let binding = left_t.meta.unwrap().clone();
+        
+                        let mut t = self.type_expression(&right)?;
+                        t.set_offset(binding);
+        
+                        self.assign(name.to_owned(), t)
+                    } else {
+                        return Err(response!(
+                            Wrong(format!("can't assign non-existent `{}`", name)),
+                            self.source.file,
+                            pos
+                        ))
+                    },
 
-                if let Some(left_t) = self.symtab.fetch(name) {
-                    let binding = left_t.meta.unwrap().clone();
-    
-                    let mut t = self.type_expression(&right)?;
-                    t.set_offset(binding);
-    
-                    self.assign(name.to_owned(), t)
-                } else {
-                    return Err(response!(
-                        Wrong(format!("can't assign non-existent `{}`", name)),
-                        self.source.file,
-                        pos
-                    ))
-                }
+                Binary(ref left, ref op, ref index) if *op == Operator::Index => {
+                    let left_ir = self.compile_expression(left)?;
+                    let index_ir = self.compile_expression(index)?;
+                    let right_ir = self.compile_expression(right)?;
+
+                    let set = self.builder.set_element(left_ir, index_ir, right_ir);
+                    self.builder.emit(set);
+
+                    return Ok(())
+                },
+
+                _ => (),
             }
 
             self.visit_expression(right)?;

@@ -622,7 +622,7 @@ impl<'p> Parser<'p> {
 
                     let position = self.current_position();
 
-                    let id = Expression::new(ExpressionNode::Identifier(self.eat()?), position);
+                    let id = Expression::new(ExpressionNode::Str(self.eat()?), position);
 
                     let position = expression.pos.clone();
 

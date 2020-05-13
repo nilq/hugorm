@@ -17,18 +17,16 @@ Hugorm is a dynamic scripting language designed for mission-critical development
 Currently the language is in the early stages, so here's a generic, useless example:
 
 ```fs
-fun a(b):
-    fun a'(c):
-        return c
+fun move-player(p, dx, dy):
+    p.x = p.x + dx
+    p.y = p.y + dy
 
-    return a'(b)
-
-let foo = {
-    bob: 10 * 10
-    ild: 100
+let player = {
+  x: 100
+  y: 100
 }
 
-print(a(foo).bob + foo.ild)
+move-player(player, 10, 10)
 ```
 
 And a more exotic example:

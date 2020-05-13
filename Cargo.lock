@@ -616,9 +616,9 @@ checksum = "712e227841d057c1ee1cd2fb22fa7e5a5461ae8e48fa2ca79ec42cfc1931183f"
 
 [[package]]
 name = "zub"
-version = "0.1.18"
+version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b65bf4ba9da563cd814a4947d93b72ac5252a292a2f04302fabad2f93acabe51"
+checksum = "d7244ba21c064469ec615d60ace9d840959f980ede316138105a1e4da0a3dfc8"
 dependencies = [
  "colored",
  "flame",

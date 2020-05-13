@@ -1,11 +1,13 @@
-fun foo():
-    while true:
-        let bar = "hey"
+fun move-player(p, dx, dy):
+    p.x = p.x + dx
+    p.y = p.y + dy
 
-        fun g():
-            print(bar)
-        
-        return g
+let player = {
+  x: 100
+  y: 100
+}
 
-let h = foo()
-h()
+move-player(player, 10, 10)
+
+print(player.x)
+print(player.y)
