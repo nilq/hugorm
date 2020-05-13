@@ -1,0 +1,5 @@
+fun say-hello(name):
+    print("hello " + name)
+
+let name = prompt()
+say-hello(name)

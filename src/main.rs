@@ -17,6 +17,7 @@ use zub::vm::*;
 use zub::compiler::*;
 use zub::ir::*;
 
+use std::io; 
 use std::rc::Rc;
 
 use colored::Colorize;
@@ -54,18 +55,35 @@ fn run(path: &str, content: &str) {
             let mut visitor = Visitor::new(&source);
 
             visitor.set_global("print", TypeNode::Func(1));
+            visitor.set_global("prompt", TypeNode::Func(0));
 
             match visitor.visit(&ast) {
                 Ok(_) => {
                     visitor.symtab.pop(); // gotta cachce root scope
 
-                    fn print(heap: &Heap<Object>, args: &[Value]) -> Value {
+                    fn print(heap: &mut Heap<Object>, args: &[Value]) -> Value {
                         println!("{}", args[1].with_heap(heap));
                         Value::nil()
                     }
 
+                    fn prompt(heap: &mut Heap<Object>, args: &[Value]) -> Value {
+                        let mut input = String::new();
+
+                        match io::stdin().read_line(&mut input) {
+                            Ok(n) => {
+                                Value::object(heap.insert_temp(Object::String(input)))
+                            }
+
+                            Err(error) => {
+                                println!("error: {}", error);
+                                Value::nil()
+                            },
+                        }
+                    }
+
                     let mut vm = VM::new();
                     vm.add_native("print", print, 1);
+                    vm.add_native("prompt", prompt, 0);
 
                     let ir = visitor.build();
 
@@ -131,7 +149,7 @@ fn repl() {
 
     let source = Source::from("<repl>", Vec::new());
 
-    fn print(heap: &Heap<Object>, args: &[Value]) -> Value {
+    fn print(heap: &mut Heap<Object>, args: &[Value]) -> Value {
         println!("{}", args[1].with_heap(heap));
         Value::nil()
     }

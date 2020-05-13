@@ -26,16 +26,11 @@ Everyone loves examples. Below are some rather useless example programs, showcas
 > Literally fun.
 
 ```fs
-fun move-player(p, dx, dy):
-    p.x = p.x + dx
-    p.y = p.y + dy
+fun say-hello(name):
+    print("hello " + name)
 
-let player = {
-  x: 100
-  y: 100
-}
-
-move-player(player, 10, 10)
+let name = prompt()
+say-hello(name)
 ```
 
 ### Loops

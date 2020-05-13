@@ -385,8 +385,8 @@ impl<'a> Visitor<'a> {
             Bool(ref b) => self.builder.bool(*b),
 
             Identifier(ref n) =>  {
-                if ["print", "dis"].contains(&n.as_str()) {
-                    self.builder.var(Binding::global("print"))
+                if ["print", "prompt"].contains(&n.as_str()) {
+                    self.builder.var(Binding::global(n))
                 } else {
                     if let Some(binding) = self.symtab.fetch(n) {
                         let mut binding = binding.meta.unwrap();
@@ -450,6 +450,7 @@ impl<'a> Visitor<'a> {
                     GtEq  => BinaryOp::GtEqual,
                     Index => BinaryOp::Index,
                     Pow   => BinaryOp::Pow, 
+                    Concat => BinaryOp::Add, // :)
                     _ => todo!()
                 };
 
