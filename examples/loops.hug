@@ -1,5 +1,5 @@
-let a = len([1, 2, 3, 4]) + 10
+let i = 0
 
-let b = a
-
-print(b)
+loop:
+    i = i + 1
+    print(i)

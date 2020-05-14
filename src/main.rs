@@ -102,7 +102,7 @@ fn run(path: &str, content: &str) {
 
                     let ir = visitor.build();
 
-                    vm.exec(&ir, false);
+                    vm.exec(&ir, true);
                 },
                 _ => (),
             }

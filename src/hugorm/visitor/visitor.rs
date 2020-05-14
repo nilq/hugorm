@@ -134,6 +134,8 @@ impl<'a> Visitor<'a> {
                 let ir = self.compile_expression(expr)?;
                 self.builder.emit(ir);
 
+                self.builder.emit(Expr::Pop.node(TypeInfo::nil()));
+
                 Ok(())
             }
             Declaration(..) => self.visit_variable(&statement.node, &statement.pos),
