@@ -1,2 +1,5 @@
-loop 100:
-    print("loopy-boi")
+let a = len([1, 2, 3, 4]) + 10
+
+let b = a
+
+print(b)

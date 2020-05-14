@@ -56,7 +56,8 @@ fn run(path: &str, content: &str) {
             let mut visitor = Visitor::new(&source);
 
             visitor.set_global("print", TypeNode::Func(1));
-            visitor.set_global("prompt", TypeNode::Func(0));
+            visitor.set_global("input", TypeNode::Func(0));
+            visitor.set_global("len", TypeNode::Func(1));
 
             match visitor.visit(&ast) {
                 Ok(_) => {
@@ -82,9 +83,22 @@ fn run(path: &str, content: &str) {
                         }
                     }
 
+                    fn len(heap: &mut Heap<Object>, args: &[Value]) -> Value {
+                        if let Variant::Obj(handle) = args[1].decode() {
+                            if let Object::List(ref list) = unsafe { heap.get_unchecked(handle) } {
+                                Value::float(list.content.len() as f64)
+                            } else {
+                                Value::nil()
+                            }
+                        } else {
+                            Value::nil()
+                        }
+                    }
+
                     let mut vm = VM::new();
                     vm.add_native("print", print, 1);
-                    vm.add_native("prompt", prompt, 0);
+                    vm.add_native("input", prompt, 0);
+                    vm.add_native("len", len, 1);
 
                     let ir = visitor.build();
 
@@ -155,12 +169,26 @@ fn repl() {
         Value::nil()
     }
 
+    fn len(heap: &mut Heap<Object>, args: &[Value]) -> Value {
+        if let Variant::Obj(handle) = args[1].decode() {
+            if let Object::List(ref list) = unsafe { heap.get_unchecked(handle) } {
+                Value::float(list.content.len() as f64)
+            } else {
+                Value::nil()
+            }
+        } else {
+            Value::nil()
+        }
+    }
+
     let mut vm = VM::new();
     vm.add_native("print", print, 1);
+    vm.add_native("len", len, 1);
 
     let mut visitor = Visitor::new(&source);
 
     visitor.set_global("print", TypeNode::Func(1));
+    visitor.set_global("len", TypeNode::Func(1));
 
     let mut last_len = 0usize;
 

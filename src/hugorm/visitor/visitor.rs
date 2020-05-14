@@ -393,7 +393,7 @@ impl<'a> Visitor<'a> {
             Bool(ref b) => self.builder.bool(*b),
 
             Identifier(ref n) =>  {
-                if ["print", "prompt", "sum"].contains(&n.as_str()) {
+                if ["print", "input", "len", "sum"].contains(&n.as_str()) {
                     self.builder.var(Binding::global(n))
                 } else {
                     if let Some(binding) = self.symtab.fetch(n) {
