@@ -44,7 +44,9 @@ impl<'l> Lexer<'l> {
                 "elif",
                 "if",
                 "while",
-                "break"
+                "break",
+                "loop",
+                "repeat",
             ],
         )));
 

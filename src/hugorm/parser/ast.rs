@@ -15,6 +15,7 @@ pub enum StatementNode {
   Interface(String, Vec<Statement>),
   If(Expression, Vec<Statement>, Vec<(Option<Expression>, Vec<Statement>)>),
   While(Expression, Vec<Statement>),
+  Block(Vec<Statement>),
   Break,
 }
 

@@ -26,17 +26,17 @@ Everyone loves examples. Below are some rather useless example programs, showcas
 > Literally fun.
 
 ```fs
-fun say-hello(name):
-    print("hello " + name)
+fun hello(name):
+    print("hello " ++ name)
 
 let name = prompt()
-say-hello(name)
+hello(name)
 ```
 
 ### Loops
 
 ```fs
-fun øllebrød(n):
+fun banana(n):
   let i = 0
   while i < n:
     if i == 0:
@@ -46,7 +46,7 @@ fun øllebrød(n):
   
     i = i + 1
     
-øllebrød(1000)
+banana(1000)
 ```
 
 ### Data
@@ -82,6 +82,11 @@ interface Moving:
 
 let snake = {} with Moving
 ```
+
+## TO-DO
+
+- [ ] Concat is sometimes wonky
+- [ ] Stack overflowing when doing extreme loops
 
 ## License
 

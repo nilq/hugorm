@@ -139,6 +139,14 @@ impl<'a> Visitor<'a> {
             Declaration(..) => self.visit_variable(&statement.node, &statement.pos),
             Assignment(..) => self.visit_ass(&statement.node, &statement.pos),
 
+            Block(ref body) => {
+                for element in body.iter() {
+                    self.visit_statement(element)?
+                }
+
+                Ok(())
+            }
+
             Return(ref value) => {
                 if self.inside.contains(&Inside::Function) {
                     let ret = if let Some(ref expression) = *value {
@@ -385,7 +393,7 @@ impl<'a> Visitor<'a> {
             Bool(ref b) => self.builder.bool(*b),
 
             Identifier(ref n) =>  {
-                if ["print", "prompt"].contains(&n.as_str()) {
+                if ["print", "prompt", "sum"].contains(&n.as_str()) {
                     self.builder.var(Binding::global(n))
                 } else {
                     if let Some(binding) = self.symtab.fetch(n) {
@@ -420,13 +428,20 @@ impl<'a> Visitor<'a> {
                 let left_ir = self.compile_expression(left)?;
 
                 let right_ir = if op == &Index {
-                    if let ExpressionNode::Str(ref n) = right.node {
-                        Expr::Literal(
-                            Literal::String(n.clone())
-                        ).node(TypeInfo::nil())
+                    match right.node {
+                        Str(ref n) => {
+                            Expr::Literal(
+                                Literal::String(n.clone())
+                            ).node(TypeInfo::nil())
+                        }
 
-                    } else {
-                        unreachable!()
+                        Int(ref n) => {
+                            Expr::Literal(
+                                Literal::Number(*n as f64)
+                            ).node(TypeInfo::nil())
+                        }
+
+                        _ => unreachable!()
                     }
                 } else {
                     self.compile_expression(right)?
@@ -651,6 +666,12 @@ impl<'a> Visitor<'a> {
                         Concat => {
                             if [TypeNode::Str, TypeNode::Any].contains(a)  {
                                 match *b {
+                                    TypeNode::Nil => return Err(response!(
+                                        Wrong(format!("can't perform operation `{:?} {} {:?}`", a, op, b)),
+                                        self.source.file,
+                                        expression.pos
+                                    )),
+
                                     _ => Type::from(TypeNode::Str),
                                 }
                             } else {
@@ -662,7 +683,19 @@ impl<'a> Visitor<'a> {
                             }
                         }
 
-                        Eq | Lt | Gt | NEq | LtEq | GtEq => {
+                        Eq | NEq => {
+                            if [a, b].contains(&&TypeNode::Nil) {
+                                return Err(response!(
+                                    Wrong(format!("can't perform operation `{:?} {} {:?}`", a, op, b)),
+                                    self.source.file,
+                                    expression.pos
+                                ));
+                            }
+
+                            Type::from(TypeNode::Bool)
+                        },
+
+                        Lt | Gt | LtEq | GtEq => {
                             let ts = [TypeNode::Any, TypeNode::Float, TypeNode::Int];
                             if ts.contains(a) && ts.contains(b) {
                                 Type::from(TypeNode::Bool)

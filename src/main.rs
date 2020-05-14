@@ -12,6 +12,7 @@ use hugorm::lexer::*;
 use hugorm::source::*;
 use hugorm::parser::*;
 use hugorm::visitor::*;
+use hugorm::prelude::math;
 
 use zub::vm::*;
 use zub::compiler::*;
@@ -168,6 +169,7 @@ fn repl() {
     let mut caret = caret_normal.clone();
 
     let mut in_buffer = false;
+    let mut debug = false;
 
     let mut line_buffer = String::new(); // for multiline stuff
 
@@ -200,6 +202,21 @@ fn repl() {
                 } else if line_buffer.len() > 0 {
                     line = format!("{}\n{}", line_buffer, line);
                     line_buffer = String::new()
+                }
+
+
+                match line.replace(" ", "").as_str() {
+                    "@math" => {
+                        math::include_math(&mut visitor, &mut vm);
+                        continue
+                    },
+
+                    "@debug" => {
+                        debug = true;
+                        continue
+                    },
+
+                    _ => ()
                 }
 
                 rl.add_history_entry(line.as_str());
@@ -260,22 +277,30 @@ fn repl() {
 
                         match visitor.visit(&repl_ast) {
                             Ok(_) => {
-                                let mut buffer = BufferRedirect::stdout().unwrap();
+                                if debug {
+                                    let ir = visitor.build();
 
-                                let ir = visitor.build();
+                                    vm.exec(&ir, true);
 
-                                vm.exec(&ir, false);
+                                    visitor.symtab.stack.push(visitor.symtab.last.clone());
 
-                                visitor.symtab.stack.push(visitor.symtab.last.clone());
-
-                                let mut output = String::new();
-                                let new_len = buffer.read_to_string(&mut output).unwrap();
-
-                                drop(buffer);
-
-                                print!("{}", &output[last_len .. new_len]);
-
-                                last_len = new_len;
+                                } else {
+                                    let mut buffer = BufferRedirect::stdout().unwrap();
+                                    let ir = visitor.build();
+    
+                                    vm.exec(&ir, false);
+    
+                                    visitor.symtab.stack.push(visitor.symtab.last.clone());
+    
+                                    let mut output = String::new();
+                                    let new_len = buffer.read_to_string(&mut output).unwrap();
+    
+                                    drop(buffer);
+    
+                                    print!("{}", &output[last_len .. new_len]);
+    
+                                    last_len = new_len;
+                                }
                             }
 
                             _ => continue 

@@ -227,6 +227,123 @@ impl<'p> Parser<'p> {
                     )
                 }
 
+                "loop" => {
+                    self.next()?;
+
+                    if self.current_lexeme() == ":" {
+                        self.next()?;
+
+                        let pos = self.span_from(position);
+
+                        let cond = Expression::new(
+                            ExpressionNode::Bool(true),
+                            pos.clone()
+                        );
+
+                        let body = if self.current_lexeme() == "\n" {
+                            self.next()?;
+                            self.parse_body()?
+                        } else {
+                            vec!(self.parse_statement()?)
+                        };
+
+                        return Ok(
+                            Statement::new(
+                                StatementNode::While(cond, body),
+                                pos
+                            )
+                        )
+                    } else {
+                        let count = self.parse_expression()?;
+
+                        self.eat_lexeme(":")?;
+
+                        let pos = self.span_from(position);
+
+                        let name = format!("$loopy-boi-{}", self.remaining()); // we can do this, the programmer can't
+
+                        let iterator = Statement::new(
+                            StatementNode::Declaration(
+                                name.clone(),
+                                Some(
+                                    Expression::new(
+                                    ExpressionNode::Int(0),
+                                    pos.clone()
+                                    )
+                                ),
+                            ),
+                            pos.clone()
+                        );
+
+                        let left = Expression::new(
+                            ExpressionNode::Identifier(name),
+                            pos.clone()
+                        );
+
+                        let increment = Statement::new(
+                            StatementNode::Assignment(
+                                left.clone(),
+                                Expression::new(
+                                    ExpressionNode::Binary(
+                                        Rc::new(left.clone()),
+                                        super::Operator::Add,
+                                        Rc::new(
+                                            Expression::new(
+                                                ExpressionNode::Int(1),
+                                                pos.clone()
+                                            )
+                                        ),
+                                    ),
+                                    pos.clone()
+                                )
+                            ),
+                            pos.clone()
+                        ); 
+
+                        let comp = Expression::new(
+                            ExpressionNode::Binary(
+                                Rc::new(left.clone()),
+                                super::Operator::Lt,
+                                Rc::new(
+                                    count
+                                ),
+                            ),
+                            pos.clone()
+                        );
+
+                        let mut body = if self.current_lexeme() == "\n" {
+                            self.next()?;
+                            self.parse_body()?
+                        } else {
+                            vec!(self.parse_statement()?)
+                        };
+
+                        body.push(increment);
+
+                        let loopy = Statement::new(
+                            StatementNode::Block(
+                                vec![
+                                    iterator,
+                                    Statement::new(
+                                        StatementNode::While(
+                                            comp,
+                                            body
+                                        ),
+                                        pos.clone()
+                                    )
+                                ]
+                            ),
+                            pos
+                        );
+
+                        println!("{:#?}", loopy);
+
+                        return Ok(
+                            loopy
+                        )
+                    }
+                }
+
                 "break" => {
                     self.next()?;
 

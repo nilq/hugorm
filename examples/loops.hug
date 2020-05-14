@@ -1,0 +1,2 @@
+loop 100:
+    print("loopy-boi")
