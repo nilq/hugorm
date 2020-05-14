@@ -53,11 +53,6 @@ banana(1000)
 
 #### Exotic loops
 
-```lua
-repeat 100:
-  print("just like 100 times")
-```
-
 ```rust
 loop:
   print("while true")
