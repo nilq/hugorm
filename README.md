@@ -1,7 +1,9 @@
-<div align="center">
-  <img width="30%" height="30%" src="https://i.ibb.co/gStcJrc/hugorm.png" alt="hugorm" border="0"/>
-</div>
-<h1 align="center">Hugorm</h1>
+<img align="right" width="30%" height="30%" src="https://i.ibb.co/jT8XDmz/hugorm.png" alt="hugorm">
+
+# Hugorm
+
+[![MIT License](https://img.shields.io/badge/license-MIT-blue.svg)](https://github.com/nilq/hugorm/blob/master/LICENSE)
+
 
 ## What is Hugorm?
 
@@ -47,6 +49,18 @@ fun banana(n):
     i = i + 1
     
 banana(1000)
+```
+
+#### Exotic loops
+
+```lua
+repeat 100:
+  print("just like 100 times")
+```
+
+```rust
+loop:
+  print("while true")
 ```
 
 ### Data
