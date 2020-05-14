@@ -435,13 +435,7 @@ impl<'a> Visitor<'a> {
                             ).node(TypeInfo::nil())
                         }
 
-                        Int(ref n) => {
-                            Expr::Literal(
-                                Literal::Number(*n as f64)
-                            ).node(TypeInfo::nil())
-                        }
-
-                        _ => unreachable!()
+                        _ => self.compile_expression(right)?
                     }
                 } else {
                     self.compile_expression(right)?
@@ -466,7 +460,6 @@ impl<'a> Visitor<'a> {
                     Index => BinaryOp::Index,
                     Pow   => BinaryOp::Pow, 
                     Concat => BinaryOp::Add, // :)
-                    _ => todo!()
                 };
 
                 self.builder.binary(left_ir, op_ir, right_ir)
@@ -564,7 +557,22 @@ impl<'a> Visitor<'a> {
                 use self::Operator::*;
 
                 if op == &Index {
-                    // TODO
+                    let a = self.type_expression(left)?.node;
+                    let b = self.type_expression(right)?.node;
+
+                    let valid = [TypeNode::Any, TypeNode::Str, TypeNode::Int];
+
+                    if !valid.contains(&a) && !valid.contains(&b) {
+                        return Err(response!(
+                            Wrong(format!(
+                                "can't index like this `{:?} {} {:?}`",
+                                a, op, b
+                            )),
+                            self.source.file,
+                            expression.pos
+                        ))
+                    }
+
                     return Ok(Type::from(TypeNode::Any))
                 }
 
@@ -577,7 +585,7 @@ impl<'a> Visitor<'a> {
                         Add | Sub | Mul | Div | Mod => {
                             if [a, b] != [&TypeNode::Nil, &TypeNode::Nil] {
                                 // real hack here
-                                if a == b {
+                                if a == b || [a, b].contains(&&TypeNode::Any) {
                                     match a {
                                         TypeNode::Float | TypeNode::Int | TypeNode::Any => match b {
                                             TypeNode::Float | TypeNode::Int | TypeNode::Any => {

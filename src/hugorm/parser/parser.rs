@@ -336,8 +336,6 @@ impl<'p> Parser<'p> {
                             pos
                         );
 
-                        println!("{:#?}", loopy);
-
                         return Ok(
                             loopy
                         )
