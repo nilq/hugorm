@@ -649,6 +649,51 @@ impl<'p> Parser<'p> {
                         position
                     ),
 
+                    "fun" => {
+                        self.next()?;
+                        
+                        let name = format!("<anon-fn ${}>", self.remaining());
+
+                        let new_pos = self.span_from(position);
+    
+                        self.eat_lexeme("(")?;
+                        self.next_newline()?;
+    
+                        let mut params = Vec::new();
+    
+                        if self.current_lexeme() != ")" {
+                            params.push(self.eat_type(&TokenType::Identifier)?);
+    
+                            while self.current_lexeme() == "," {
+                                self.next()?;
+                                self.next_newline()?;
+                                
+                                params.push(self.eat_type(&TokenType::Identifier)?)
+                            }
+                        }
+    
+                        self.eat_lexeme(")")?;
+                        self.eat_lexeme(":")?;
+    
+                        let body = if self.current_lexeme() == "\n" {
+                            self.next()?;
+                            self.parse_body()?
+                        } else {
+                            vec!(self.parse_statement()?)
+                        };
+    
+                        return Ok(
+                            Expression::new(
+                                ExpressionNode::AnonFunction(
+                                    name,
+                                    params,
+                                    body
+                                ),
+                                new_pos
+                            )
+                        )
+                    },
+
                     c => return Err(response!(
                         Wrong(format!("unexpected keyword `{}`", c)),
                         self.source.file,

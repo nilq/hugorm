@@ -237,7 +237,7 @@ impl<'a> Visitor<'a> {
             While(ref cond, ref body) => {
                 self.visit_expression(cond)?;
 
-                if TypeNode::Bool == self.type_expression(cond)?.node {
+                if [TypeNode::Bool, TypeNode::Any].contains(&self.type_expression(cond)?.node) {
                     let cond = self.compile_expression(cond)?;
 
                     let old_current = self.builder.clone();
@@ -279,7 +279,7 @@ impl<'a> Visitor<'a> {
             If(ref cond, ref body, ref else_) => {
                 self.visit_expression(cond)?;
 
-                if TypeNode::Bool == self.type_expression(cond)?.node {
+                if [TypeNode::Bool, TypeNode::Any].contains(&self.type_expression(cond)?.node) {
                     let cond = self.compile_expression(cond)?;
 
                     let old_current = self.builder.clone();
@@ -492,6 +492,62 @@ impl<'a> Visitor<'a> {
 
                 self.builder.dict(keys, vals)
             }
+
+            AnonFunction(ref name, ref params, ref body) => {
+                let mut t = Type::from(TypeNode::Func(params.len()));
+
+                println!("{}", params.len());
+
+                let binding = Binding::local(name, self.depth, self.function_depth);
+                t.set_offset(binding.clone());
+
+                self.assign(name.to_owned(), t);
+
+                let old_current = self.builder.clone();
+                self.builder = IrBuilder::new();
+
+                self.function_depth += 1;
+                self.push_scope();
+                self.inside.push(Inside::Function);
+
+                for param in params.iter() {
+                    let mut t = Type::from(TypeNode::Any);
+                    t.set_offset(Binding::local(param.as_str(), self.depth, self.function_depth));
+
+                    self.assign(param.clone(), t)
+                }
+
+                for statement in body.iter() {
+                    self.visit_statement(statement)?;
+                }
+
+
+                self.inside.pop();
+                self.pop_scope();
+                self.function_depth -= 1;
+
+                self.builder.ret(None);
+
+                let body = self.builder.build();
+
+                self.builder = old_current;
+
+                let func_body = IrFunctionBody {
+                    params: params.iter().cloned().map(|x|
+                        Binding::local(x.as_str(), binding.depth.unwrap_or(0) + 1, binding.function_depth + 1)).collect::<Vec<Binding>>(),
+                    method: false,
+                    inner: body
+                };
+
+                let ir_func = IrFunction {
+                    var: binding,
+                    body: Rc::new(RefCell::new(func_body))
+                };
+
+                Expr::AnonFunction(ir_func).node(TypeInfo::nil())
+            },
+
+            EOF => { Expr::Return(None).node(TypeInfo::nil()) },
 
             ref c => todo!("{:#?}", c),
         };

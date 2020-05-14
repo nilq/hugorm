@@ -102,7 +102,7 @@ fn run(path: &str, content: &str) {
 
                     let ir = visitor.build();
 
-                    vm.exec(&ir, true);
+                    vm.exec(&ir, false);
                 },
                 _ => (),
             }
@@ -308,7 +308,7 @@ fn repl() {
                                 if debug {
                                     let ir = visitor.build();
 
-                                    vm.exec(&ir, true);
+                                    vm.exec(&ir, false);
 
                                     visitor.symtab.stack.push(visitor.symtab.last.clone());
 

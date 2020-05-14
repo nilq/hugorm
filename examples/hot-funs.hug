@@ -1,0 +1,8 @@
+let foo = {
+    f: fun(a): return 10 + a
+}
+
+fun extra():
+  print(foo.f(10))
+
+extra()

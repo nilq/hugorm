@@ -51,6 +51,7 @@ pub enum ExpressionNode {
   Array(Vec<Expression>),
   Dict(Vec<(String, Expression)>),
   With(Rc<Expression>, Rc<Expression>),
+  AnonFunction(String, Vec<String>, Vec<Statement>), // name is ID, still GDPR-anonymous
   Empty,
   EOF,
 }
