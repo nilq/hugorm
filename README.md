@@ -94,8 +94,9 @@ let snake = {} with Moving
 
 ## TO-DO
 
-- [ ] Concat is sometimes wonky
-- [ ] Stack overflowing when doing extreme loops
+- [ ] Shunting-yard to be reviewed
+- [ ] For-loops and iterators
+- [ ] Interfaces
 
 ## License
 
