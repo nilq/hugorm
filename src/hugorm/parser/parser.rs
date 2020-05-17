@@ -836,7 +836,9 @@ impl<'p> Parser<'p> {
                 let position = self.current_position();
                 let (operator, precedence) = Operator::from_str(&self.eat()?).unwrap();
 
-                if precedence < operator_stack.last().unwrap().1 {
+                let oppy = operator_stack.last().unwrap();
+
+                if precedence <= oppy.1 {
                     let right = expression_stack.pop().unwrap();
                     let left = expression_stack.pop().unwrap();
 
