@@ -54,8 +54,14 @@ banana(1000)
 #### Exotic loops
 
 ```rust
+let i = 0
+
 loop:
-  print("while true")
+    unless i > 1000:
+        i = i + 1
+        print(i)
+    else:
+        break
 ```
 
 ### Data
