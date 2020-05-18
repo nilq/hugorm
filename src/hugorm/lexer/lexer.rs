@@ -47,6 +47,7 @@ impl<'l> Lexer<'l> {
                 "break",
                 "loop",
                 "repeat",
+                "unless"
             ],
         )));
 

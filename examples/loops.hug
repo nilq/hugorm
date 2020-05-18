@@ -1,5 +1,8 @@
 let i = 0
 
 loop:
-    i = i + 1
-    print(i)
+    unless i > 1000:
+        i = i + 1
+        print(i)
+    else:
+        break

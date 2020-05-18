@@ -549,6 +549,16 @@ impl<'a> Visitor<'a> {
 
             EOF => { Expr::Return(None).node(TypeInfo::nil()) },
 
+            Not(ref expr) => {
+                let ir = self.compile_expression(expr)?;
+                Expr::Not(ir).node(TypeInfo::nil())
+            }
+
+            Neg(ref expr) => {
+                let ir = self.compile_expression(expr)?;
+                Expr::Neg(ir).node(TypeInfo::nil())
+            }
+
             ref c => todo!("{:#?}", c),
         };
 
