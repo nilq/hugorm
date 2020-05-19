@@ -3,16 +3,17 @@ extern crate rustyline;
 extern crate rustyline_derive;
 extern crate zub;
 extern crate gag;
+extern crate statrs;
 
 use gag::BufferRedirect;
 use std::io::Read;
 
 mod hugorm;
-use hugorm::lexer::*;
-use hugorm::source::*;
-use hugorm::parser::*;
-use hugorm::visitor::*;
-use hugorm::prelude::math;
+use crate::hugorm::lexer::*;
+use crate::hugorm::source::*;
+use crate::hugorm::parser::*;
+use crate::hugorm::visitor::*;
+use crate::hugorm::prelude::math;
 
 use zub::vm::*;
 use zub::compiler::*;
@@ -97,7 +98,6 @@ fn run(path: &str, content: &str) {
 
                     let mut vm = VM::new();
                     vm.add_native("print", print, 1);
-                    vm.add_native("input", prompt, 0);
                     vm.add_native("len", len, 1);
 
                     let ir = visitor.build();

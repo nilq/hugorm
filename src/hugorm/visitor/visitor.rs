@@ -395,22 +395,23 @@ impl<'a> Visitor<'a> {
             Bool(ref b) => self.builder.bool(*b),
 
             Identifier(ref n) =>  {
-                if ["print", "input", "len", "sum"].contains(&n.as_str()) {
-                    self.builder.var(Binding::global(n))
-                } else {
-                    if let Some(binding) = self.symtab.fetch(n) {
-                        let mut binding = binding.meta.unwrap();
-
+                if let Some(binding) = self.symtab.fetch(n) {
+                    if let Some(mut binding) = binding.meta {
                         binding = Binding::local(n, self.depth, binding.function_depth);
 
                         self.builder.var(binding)
                     } else {
-                        return Err(response!(
-                            Wrong(format!("no such variable `{}`", n)),
-                            self.source.file,
-                            expression.pos
-                        ));
+                        let binding = Binding::global(n);
+
+                        self.builder.var(binding)
                     }
+
+                } else {
+                    return Err(response!(
+                        Wrong(format!("no such variable `{}`", n)),
+                        self.source.file,
+                        expression.pos
+                    ));
                 }
             }
 

@@ -1,8 +1,8 @@
 let i = 0
 
 loop:
-    unless i > 1000:
+    unless i > 6000:
         i = i + 1
-        print(i)
+        print(print(i))
     else:
         break

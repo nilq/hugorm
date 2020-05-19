@@ -213,6 +213,7 @@ dependencies = [
  "gag",
  "rustyline",
  "rustyline-derive",
+ "statrs",
  "zub",
 ]
 
@@ -492,6 +493,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "statrs"
+version = "0.12.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cce16f6de653e88beca7bd13780d08e09d4489dbca1f9210e041bc4852481382"
+dependencies = [
+ "rand",
+]
+
+[[package]]
 name = "syn"
 version = "0.15.44"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -616,9 +626,9 @@ checksum = "712e227841d057c1ee1cd2fb22fa7e5a5461ae8e48fa2ca79ec42cfc1931183f"
 
 [[package]]
 name = "zub"
-version = "0.3.0"
+version = "0.3.14"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "83a301cc883f6adfb032f3a3803074cda7db33bd0029b6a4ebcb0806ffdb3961"
+checksum = "45f0d0cedfa5230a15b96a6df4fc82495a8b647b7b9b33ae16b8791823e3d5e1"
 dependencies = [
  "colored",
  "flame",
