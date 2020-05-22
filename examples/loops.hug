@@ -1,8 +1,8 @@
 let i = 0
 
-loop:
+loop 100:
     unless i > 6000:
         i = i + 1
-        print(print(i))
+        print(i)
     else:
         break

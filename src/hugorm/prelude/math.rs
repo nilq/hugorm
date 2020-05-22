@@ -49,7 +49,10 @@ fn student(heap: &mut Heap<Object>, args: &[Value]) -> Value {
 
     let t = StudentsT::new(floats[0], floats[1], floats[2]).unwrap();
 
-    println!("{}", t.mean());
+    println!("mean:    {}", t.mean());
+    println!("var:     {}", t.variance());
+    println!("std-var: {}", t.std_dev());
+    println!();
 
     Value::nil()
 }
