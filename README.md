@@ -27,76 +27,34 @@ Everyone loves examples. Below are some rather useless example programs, showcas
 ### Functions
 > Literally fun.
 
-```fs
-fun hello(name):
-    print("hello " ++ name)
-
-let name = prompt()
-hello(name)
-```
+<img src="https://i.ibb.co/8bvCH8k/firsthug.png" alt="firsthug" border="0">
 
 ### Loops
 
-```fs
-fun banana(n):
-  let i = 0
-  while i < n:
-    if i == 0:
-      print("hey")
-    else:
-      print("hey again")
-  
-    i = i + 1
-    
-banana(1000)
-```
+<img src="https://i.ibb.co/s9kd2NT/whilehug.png" alt="whilehug" border="0">
 
 #### Exotic loops
 
-```rust
-let i = 0
-
-loop:
-    unless i > 1000:
-        i = i + 1
-        print(i)
-    else:
-        break
-```
+<img src="https://i.ibb.co/4s36sFm/loophug.png" alt="loophug" border="0">
 
 ### Data
 
-The code below will print `200`.
+<img src="https://i.ibb.co/6thjD25/hug.png" alt="hug" border="0">
 
-```fs
-let player = {
-  x: 100
-  y: 100
-}
-
-let foo = {
-    x: player.x + 100
-}
-
-player = foo
-
-print(player.x)
-```
-
-## The future
 
 ### Interfaces
 
 An interface will work like a set of pre-made functions that can be bound to new objects. Kinda like the way you implement traits on a struct in Rust.
 
-```fs
-interface Moving:
-  fun move(self, x, y):
-    self.x += x
-    self.y += y
+<img src="https://i.ibb.co/N6d6cw3/interface.png" alt="interface" border="0">
 
-let snake = {} with Moving
-```
+## The future
+
+### Web
+
+In the future, I want to have inline web things.
+
+<img src="https://i.ibb.co/xY5KpKR/weblolhug.png" alt="weblolhug" border="0">
 
 ## TO-DO
 
