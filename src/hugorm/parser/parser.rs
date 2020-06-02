@@ -45,6 +45,7 @@ impl<'p> Parser<'p> {
             self.next()?
         }
 
+        let backup_index = self.index;
         let position = self.current_position();
 
         let statement = match self.current_type() {
@@ -353,9 +354,7 @@ impl<'p> Parser<'p> {
                         StatementNode::Break,
                         position
                     )
-                }
-
-                
+                }                
 
                 "if" => {
                     self.next()?;
@@ -510,17 +509,24 @@ impl<'p> Parser<'p> {
             },
 
             _ => {
-                let expression = self.parse_expression()?;
-                let position = expression.pos.clone();
+                let expression = self.parse_atom()?;
 
                 if let Some(result) = self.try_parse_compound(&expression)? {
                     result
                 } else {
+                    self.index = backup_index;
+
+                    let expression = self.parse_expression()?;
+                    let position = expression.pos.clone();
+
                     if self.current_lexeme() == "=" {
                         self.next()?;
 
                         Statement::new(
-                            StatementNode::Assignment(expression, self.parse_expression()?),
+                            StatementNode::Assignment(
+                                expression,
+                                self.parse_expression()?,
+                            ),
                             position,
                         )
                     } else {
@@ -547,6 +553,7 @@ impl<'p> Parser<'p> {
         let mut result = None;
 
         if self::Operator::is_compoundable(&c) {
+
             let op = self::Operator::from_str(&c).unwrap().0;
 
             let position = self.current_position();
@@ -714,6 +721,7 @@ impl<'p> Parser<'p> {
                     },
 
                     ref c => {
+                        panic!();
                         return Err(response!(
                             Wrong(format!("unexpected symbol `{}`", c)),
                             self.source.file,
@@ -911,7 +919,6 @@ impl<'p> Parser<'p> {
             let operator = Operator::from_str(self.eat()?.as_str()).unwrap();
 
             if operator.1 < min_prec as u8 {
-                println!("we've reached a bruh moment: {:#?} @ {} {}", operator.0, operator.1, min_prec);
                 self.index = index_backup;
                 break
             }
@@ -934,8 +941,6 @@ impl<'p> Parser<'p> {
                 self.span_from(left_position.clone())
             );
         }
-
-        println!("next: {}", self.current_lexeme());
 
         Ok(left)
     }

@@ -83,6 +83,10 @@ impl Operator {
     &Operator::Pow == self
   }
 
+  pub fn is_compoundable(operator: &str) -> bool {
+    ["+", "-", "*", "/", "++", "%", "^", "or", "and"].contains(&operator)
+  }
+
   pub fn from_str(operator: &str) -> Option<(Operator, u8)> {
     use self::Operator::*;
 
@@ -130,10 +134,6 @@ impl Operator {
       Or     => "or",
       And    => "and",
     }
-  }
-
-  pub fn is_compoundable(operator: &str) -> bool {
-    ["+", "-", "*", "/", "++", "%", "^", "not", "or", "and"].contains(&operator)
   }
 }
 

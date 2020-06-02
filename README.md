@@ -100,7 +100,7 @@ let snake = {} with Moving
 
 ## TO-DO
 
-- [🐍] Shunting-yard to be reviewed
+- [x] Shunting-yard to be reviewed
 - [ ] For-loops and iterators
 - [ ] Interfaces
 

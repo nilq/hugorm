@@ -46,8 +46,8 @@ impl<'l> Lexer<'l> {
                 "while",
                 "break",
                 "loop",
-                "repeat",
-                "unless"
+                "unless",
+                "use"
             ],
         )));
 

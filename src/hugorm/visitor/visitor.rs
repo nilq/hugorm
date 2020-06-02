@@ -497,8 +497,6 @@ impl<'a> Visitor<'a> {
             AnonFunction(ref name, ref params, ref body) => {
                 let mut t = Type::from(TypeNode::Func(params.len()));
 
-                println!("{}", params.len());
-
                 let binding = Binding::local(name, self.depth, self.function_depth);
                 t.set_offset(binding.clone());
 

@@ -258,7 +258,7 @@ impl<'t> Matcher<'t> for IdentifierMatcher {
     fn try_match(&self, tokenizer: &mut Tokenizer<'t>) -> Result<Option<Token>, ()> {
         let peeked = tokenizer.peek().unwrap();
 
-        if !peeked.is_alphabetic() && ['_', '\''].contains(&peeked) {
+        if !peeked.is_alphabetic() && ['\''].contains(&peeked) {
             return Ok(None);
         }
 
