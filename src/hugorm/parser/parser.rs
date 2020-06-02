@@ -356,7 +356,7 @@ impl<'p> Parser<'p> {
                     )
                 }
                 
-                "use" => {
+                "grab" => {
                     self.next()?;
 
                     let import = self.eat_type(&TokenType::Identifier)?;

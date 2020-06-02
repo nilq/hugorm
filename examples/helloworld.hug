@@ -1,4 +1,4 @@
-use test-use
+grab test-use
 
 fun move-player(p, dx, dy):
     p.x += dx
