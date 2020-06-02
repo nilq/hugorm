@@ -36,7 +36,7 @@ fn run(path: &str, content: &str) {
 
     match parser.parse() {
         Ok(ast) => {
-            let mut visitor = Visitor::new(&source);
+            let mut visitor = Visitor::new(&source, String::new());
 
             visitor.set_global("print", TypeNode::Func(1));
             visitor.set_global("input", TypeNode::Func(0));

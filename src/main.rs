@@ -36,7 +36,7 @@ use std::path::Path;
 use std::fs::File;
 use std::fs::metadata;
 
-fn run(path: &str, content: &str) {
+fn run(path: &str, content: &str, root: String) {
     let source = Source::from(path, content.lines().map(|x| x.into()).collect::<Vec<String>>());
     let lexer = Lexer::default(content.chars().collect(), &source);
 
@@ -54,7 +54,7 @@ fn run(path: &str, content: &str) {
 
     match parser.parse() {
         Ok(ast) => {
-            let mut visitor = Visitor::new(&source);
+            let mut visitor = Visitor::new(&source, root);
 
             visitor.set_global("print", TypeNode::Func(1));
             visitor.set_global("input", TypeNode::Func(0));
@@ -149,7 +149,7 @@ fn hugorm_hints() -> HashSet<String> {
     set
 }
 
-fn repl() {
+fn repl(root: String) {
     let hinter = HugHinter {
         hints: hugorm_hints()
     };
@@ -185,7 +185,7 @@ fn repl() {
     vm.add_native("print", print, 1);
     vm.add_native("len", len, 1);
 
-    let mut visitor = Visitor::new(&source);
+    let mut visitor = Visitor::new(&source, root);
 
     visitor.set_global("print", TypeNode::Func(1));
     visitor.set_global("len", TypeNode::Func(1));
@@ -357,7 +357,7 @@ fn repl() {
     }
 }
 
-fn run_file(path: &str, root: &String) {
+fn run_file(path: &str, root: String) {
     let display = Path::new(path).display();
 
     let mut file = match File::open(&path) {
@@ -369,18 +369,19 @@ fn run_file(path: &str, root: &String) {
 
     match file.read_to_string(&mut s) {
         Err(why) => panic!("failed to read {}: {}", display, why),
-        Ok(_) => run(&path, &s),
+        Ok(_) => run(&path, &s, root),
     }
 }
 
 fn main() {
     let args = std::env::args().collect::<Vec<String>>();
+    let root = Path::new(&args[0].to_string()).parent().unwrap().display().to_string();
 
     if args.len() == 1 {
-        repl()
+        repl(root)
     } else {
         for arg in args[1..].iter() {
-            run_file(arg, arg)
+            run_file(arg, root.clone())
         }
     }
 }

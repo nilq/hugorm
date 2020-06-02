@@ -1,0 +1,4 @@
+let position = {
+    x: 1000
+    y: 200
+}

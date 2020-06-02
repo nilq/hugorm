@@ -354,7 +354,18 @@ impl<'p> Parser<'p> {
                         StatementNode::Break,
                         position
                     )
-                }                
+                }
+                
+                "use" => {
+                    self.next()?;
+
+                    let import = self.eat_type(&TokenType::Identifier)?;
+
+                    Statement::new(
+                        StatementNode::Use(import),
+                        self.span_from(position)
+                    )
+                }
 
                 "if" => {
                     self.next()?;

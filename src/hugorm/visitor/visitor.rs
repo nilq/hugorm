@@ -75,10 +75,11 @@ pub struct Visitor<'a> {
     pub symtab: SymTab,
     pub builder: IrBuilder,
     pub repl: bool,
+    pub root: String,
 }
 
 impl<'a> Visitor<'a> {
-    pub fn new(source: &'a Source) -> Self {
+    pub fn new(source: &'a Source, root: String) -> Self {
         Visitor {
             source,
             symtab: SymTab::new(),
@@ -87,10 +88,11 @@ impl<'a> Visitor<'a> {
             function_depth: 0,
             builder: IrBuilder::new(),
             repl: false,
+            root,
         }
     }
 
-    pub fn from(source: &'a Source, symtab: SymTab) -> Self {
+    pub fn from(source: &'a Source, symtab: SymTab, root: String) -> Self {
         Visitor {
             source,
             symtab,
@@ -98,7 +100,8 @@ impl<'a> Visitor<'a> {
             depth: 0,
             function_depth: 0,
             builder: IrBuilder::new(),
-            repl: false
+            repl: false,
+            root
         }
     }
 
@@ -128,6 +131,45 @@ impl<'a> Visitor<'a> {
         let position = statement.pos.clone();
 
         match statement.node {
+            Use(ref path) => {
+                let local_root = Path::new(&self.source.file.0).parent().unwrap().display().to_string();
+                // &self.root.clone()
+                let module = self.find_module(path, &local_root, &statement)?;
+
+                let mut file = match File::open(&module) {
+                    Err(why) => panic!("failed to open {}: {}", module, why),
+                    Ok(file) => file,
+                };
+
+                let mut content = String::new();
+
+                match file.read_to_string(&mut content) {
+                    Err(why) => panic!("failed to read {}: {}", module, why),
+                    Ok(_) => {
+                        let source = Source::new(module);
+                        let lexer = Lexer::default(content.chars().collect(), &source);
+
+                        let mut tokens = Vec::new();
+
+                        for token_result in lexer {
+                            if let Ok(token) = token_result {
+                                tokens.push(token)
+                            } else {
+                                panic!("weird unexpected lexer error")
+                            }
+                        }
+
+                        let parsed = Parser::new(tokens, &source).parse()?;
+
+                        for statement in parsed.iter() {
+                            self.visit_statement(&statement)?
+                        }
+                    }
+                }
+
+                Ok(())
+            }
+            
             Expression(ref expr) => {
                 self.visit_expression(expr)?;
 
@@ -383,6 +425,37 @@ impl<'a> Visitor<'a> {
                 ))
             }
         }
+    }
+
+    #[inline]
+    fn find_module(&mut self, path: &String, root: &String, statement: &Statement) -> Result<String, ()> {
+        let my_folder = Path::new(&root);
+
+        let file_path = format!("{}/{}.hug", my_folder.to_str().unwrap(), path);
+        let module = Path::new(&file_path);
+
+        let init_path = format!("{}/{}/mod.hug", my_folder.to_str().unwrap(), path);
+
+        let module = if !module.exists() {
+            let module = Path::new(&init_path);
+        
+            if !module.exists() {
+                return Err(response!(
+                    Wrong(format!(
+                        "no such module `{0}`, needed either `{0}.hug` or `{0}/init.hug`",
+                        path
+                    )),
+                    self.source.file,
+                    statement.pos
+                ));
+            } else {
+                module
+            }
+        } else {
+            module
+        };
+
+        Ok(module.display().to_string())
     }
 
     fn compile_expression(&mut self, expression: &Expression) -> Result<ExprNode, ()> {

@@ -1,10 +1,12 @@
+use test-use
+
 fun move-player(p, dx, dy):
     p.x += dx
     p.y += dy
 
 let player = {
-  x: 100
-  y: 100
+  x: position.x
+  y: position.y
 }
 
 move-player(player, 10, 10)
