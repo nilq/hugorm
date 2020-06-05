@@ -4,22 +4,26 @@ use std::collections::HashMap;
 use std::rc::Rc;
 
 use super::visitor::*;
+use super::super::parser::*;
 
 #[derive(Debug, Clone)]
 pub struct Frame {
     pub table: RefCell<HashMap<String, Type>>,
+    pub interfaces: HashMap<String, Vec<Statement>>,
 }
 
 impl Frame {
     pub fn new() -> Self {
         Frame {
             table: RefCell::new(HashMap::new()),
+            interfaces: HashMap::new()
         }
     }
 
     pub fn from(table: HashMap<String, Type>) -> Self {
         Frame {
             table: RefCell::new(table),
+            interfaces: HashMap::new()
         }
     }
 
@@ -29,6 +33,14 @@ impl Frame {
         } else {
             None
         }
+    }
+
+    pub fn insert_interface(&mut self, name: String, interface: Vec<Statement>) {
+        self.interfaces.insert(name, interface);
+    }
+
+    pub fn get_interface(&self, name: String) -> Option<&Vec<Statement>> {
+        self.interfaces.get(&name)
     }
 
     pub fn assign(&mut self, name: String, t: Type) {

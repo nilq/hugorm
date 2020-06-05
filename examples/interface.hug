@@ -1,0 +1,7 @@
+interface Brr:
+    fun add(a):
+        return a + 100
+
+let foo = {} with Brr
+
+print(foo.add(100))

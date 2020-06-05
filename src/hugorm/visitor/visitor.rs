@@ -169,7 +169,7 @@ impl<'a> Visitor<'a> {
 
                 Ok(())
             }
-            
+
             Expression(ref expr) => {
                 self.visit_expression(expr)?;
 
@@ -268,10 +268,15 @@ impl<'a> Visitor<'a> {
                 Ok(())
             },
 
-            Interface(_, ref content) => {
+            Interface(ref name, ref content) => {
+                let mut interface = Vec::new();
+
                 for fun in content.iter() {
-                    self.visit_statement(fun)?
+                    self.visit_statement(fun)?;
+                    interface.push(fun.clone())
                 }
+
+                self.symtab.current_frame_mut().insert_interface(name.clone(), interface);
 
                 Ok(())
             }
@@ -565,6 +570,38 @@ impl<'a> Visitor<'a> {
                 }
 
                 self.builder.dict(keys, vals)
+            }
+
+            With(ref dict, ref interface) => {
+                if let Dict(ref content) = dict.node {
+                    let mut new_content = content.clone();
+                    if let Identifier(ref name) = interface.node {
+                        if let Some(interface) = self.symtab.current_frame().get_interface(name.clone()) {
+                            for fun in interface.iter() {
+                                if let StatementNode::Function(ref name, ref params, ref body) = fun.node {
+                                    let closure = Expression::new(
+                                        ExpressionNode::AnonFunction("<bob>".to_string(), params.clone(), body.clone()),
+                                        expression.pos.clone()
+                                    );
+
+                                    new_content.push((name.clone(), closure));
+                                }
+                            }
+                            let dict = Expression::new(
+                                ExpressionNode::Dict(new_content),
+                                expression.pos.clone()
+                            );
+
+                            self.compile_expression(&dict)?
+                        } else {
+                            panic!("grr")
+                        }
+                    } else {
+                        unreachable!()
+                    }
+                } else {
+                    unreachable!()
+                }
             }
 
             AnonFunction(ref name, ref params, ref body) => {

@@ -1,0 +1,6 @@
+fun apply(f, a):
+    return f(a)
+
+let foo = fun(a): return 100 * a
+
+let bar = apply(foo, 10)

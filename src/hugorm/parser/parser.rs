@@ -355,7 +355,7 @@ impl<'p> Parser<'p> {
                         position
                     )
                 }
-                
+
                 "grab" => {
                     self.next()?;
 
@@ -516,6 +516,59 @@ impl<'p> Parser<'p> {
                     let position = expression.pos.clone();
     
                     Statement::new(StatementNode::Expression(expression), position)
+                }
+            },
+
+            Identifier => {
+                let backup_index = self.index;
+                let position = self.current_position();
+                let name = self.eat_type(&Identifier)?;
+
+                match self.current_lexeme().as_str() {
+                    "=" => {
+                        Statement::new(
+                            StatementNode::Assignment(
+                                Expression::new(ExpressionNode::Identifier(name), position.clone()),
+                                self.parse_expression()?,
+                            ),
+                            position,
+                        )
+                    }
+
+                    c => {
+                        let expression = Expression::new(ExpressionNode::Identifier(name), position.clone());
+
+                        if let Some(result) = self.try_parse_compound(&expression)? {
+                            result
+                        } else {
+                            self.index = backup_index;
+
+                            let expression = self.parse_atom()?;
+
+                            if let Some(result) = self.try_parse_compound(&expression)? {
+                                result
+                            } else {
+                                self.index = backup_index;
+
+                                let expression = self.parse_expression()?;
+                                let position = expression.pos.clone();
+
+                                if self.current_lexeme() == "=" {
+                                    self.next()?;
+
+                                    Statement::new(
+                                        StatementNode::Assignment(
+                                            expression,
+                                            self.parse_expression()?,
+                                        ),
+                                        position,
+                                    )
+                                } else {
+                                    Statement::new(StatementNode::Expression(expression), position)
+                                }
+                            }
+                        }
+                    }
                 }
             },
 
@@ -732,7 +785,6 @@ impl<'p> Parser<'p> {
                     },
 
                     ref c => {
-                        panic!();
                         return Err(response!(
                             Wrong(format!("unexpected symbol `{}`", c)),
                             self.source.file,

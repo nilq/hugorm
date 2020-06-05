@@ -1,0 +1,8 @@
+fun is-ok(a):
+    return a <= 100
+
+let i = 0
+
+while is-ok(i):
+    print("we're ok")
+    i += 1
