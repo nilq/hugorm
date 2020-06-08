@@ -2,9 +2,11 @@ extern crate colored;
 extern crate rustyline;
 extern crate rustyline_derive;
 extern crate zub;
+#[cfg(unix)]
 extern crate gag;
 extern crate statrs;
 
+#[cfg(unix)]
 use gag::BufferRedirect;
 use std::io::Read;
 
@@ -19,7 +21,7 @@ use zub::vm::*;
 use zub::compiler::*;
 use zub::ir::*;
 
-use std::io; 
+use std::io;
 use std::rc::Rc;
 
 use colored::Colorize;
@@ -149,6 +151,7 @@ fn hugorm_hints() -> HashSet<String> {
     set
 }
 
+#[cfg(unix)]
 fn repl(root: String) {
     let hinter = HugHinter {
         hints: hugorm_hints()
@@ -248,7 +251,7 @@ fn repl(root: String) {
                 }
 
                 rl.add_history_entry(line.as_str());
-                
+
                 let source = Source::from("<repl>", line.lines().map(|x| x.into()).collect::<Vec<String>>());
                 let lexer = Lexer::default(line.chars().collect(), &source);
 
@@ -315,23 +318,23 @@ fn repl(root: String) {
                                 } else {
                                     let mut buffer = BufferRedirect::stdout().unwrap();
                                     let ir = visitor.build();
-    
+
                                     vm.exec(&ir, false);
-    
+
                                     visitor.symtab.stack.push(visitor.symtab.last.clone());
-    
+
                                     let mut output = String::new();
                                     let new_len = buffer.read_to_string(&mut output).unwrap();
-    
+
                                     drop(buffer);
-    
+
                                     print!("{}", &output[last_len .. new_len]);
-    
+
                                     last_len = new_len;
                                 }
                             }
 
-                            _ => continue 
+                            _ => continue
                         }
                     },
 
@@ -378,7 +381,14 @@ fn main() {
     let root = Path::new(&args[0].to_string()).parent().unwrap().display().to_string();
 
     if args.len() == 1 {
-        repl(root)
+        #[cfg(unix)]
+        {
+            repl(root)
+        }
+        #[cfg(not(unix))]
+        {
+            println!("Oops! REPL is not available on non-unix platforms!");
+        }
     } else {
         for arg in args[1..].iter() {
             run_file(arg, root.clone())

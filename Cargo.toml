@@ -10,6 +10,8 @@ edition = "2018"
 colored = "1.9.3"
 rustyline = "6.1.2"
 zub = "0.3.14"
-gag = "0.1.10"
 rustyline-derive = "0.3.1"
 statrs = "0.12.0"
+
+[target.'cfg(unix)'.dependencies]
+gag = "0.1.10"
