@@ -2,6 +2,7 @@ extern crate colored;
 extern crate rustyline;
 extern crate rustyline_derive;
 extern crate zub;
+#[cfg(unix)]
 extern crate gag;
 
 use std::io::Read;
